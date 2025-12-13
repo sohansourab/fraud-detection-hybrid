@@ -3,3 +3,5 @@ git status	"What have I changed so far?"
 git add .	"Include everything in the next save."
 git commit -m "msg"	"Save it now."
 git log	"Show me my timeline."
+git remote add origin "given link after creating repo"
+git push -u origin main

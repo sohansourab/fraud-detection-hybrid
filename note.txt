@@ -1,3 +1,5 @@
 #activating environment
 
 source /home/sohansourab/Documents/promptpirates/.venv/bin/activate
+
+installing dependencies
