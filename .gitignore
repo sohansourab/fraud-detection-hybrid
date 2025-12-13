@@ -1,0 +1,10 @@
+# Ignore the Python virtual environment (too huge)
+.venv/
+__pycache__/
+
+# Ignore Secrets (CRITICAL)
+.env
+
+# Ignore the "Ghotala" synthetic data (can always re-generate)
+*.csv
+fraud_report.json
