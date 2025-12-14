@@ -7,7 +7,8 @@ import os
 from fpdf import FPDF
 
 # --- CONFIGURATION ---
-INPUT_FILE = "fraud_report.json"
+INPUT_FILE = "output/reports/fraud_report.json"
+NOTICE_DIR = "output/notices"
 
 # --- PDF GENERATOR ---
 class PDFNotice(FPDF):
@@ -47,7 +48,7 @@ def create_show_cause_notice(case_data):
     """
     pdf.multi_cell(0, 7, text)
     
-    filename = f"Notice_{ben_id}.pdf"
+    filename = os.path.join(NOTICE_DIR, f"Notice_{ben_id}.pdf")
     pdf.output(filename)
     print(f"   📄 Generated Notice for {ben_id}")
 

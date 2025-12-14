@@ -1,6 +1,3 @@
-'''This agent acts as the "Principal Auditor." It reads your CSV, sends data to your local Llama 3.2 model
-, and generates the fraud report.'''
-
 import pandas as pd
 import ollama
 import json
@@ -9,8 +6,11 @@ import os
 
 # --- CONFIGURATION ---
 MODEL_NAME = "llama3.2"  # Ensure you ran 'ollama run llama3.2'
-INPUT_FILE = "beneficiaries.csv"
-OUTPUT_FILE = "fraud_report.json"
+INPUT_FILE = "data/beneficiaries.csv"
+OUTPUT_FILE = "output/reports/fraud_report.json"
+#check to ensure folders exist:
+import os
+os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
 
 # --- 1. SETUP ---
 if not os.path.exists(INPUT_FILE):

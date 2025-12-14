@@ -61,7 +61,7 @@ for i in range(NUM_BENEFICIARIES):
     beneficiaries.append(ben)
 
 df_ben = pd.DataFrame(beneficiaries)
-df_ben.to_csv('beneficiaries.csv', index=False)
+df_ben.to_csv('data/beneficiaries.csv', index=False)
 print("   ✅ beneficiaries.csv created.")
 
 
@@ -108,7 +108,7 @@ for i in range(NUM_MGNREGA_TXNS):
     mgnrega_txns.append(txn)
 
 df_mgn = pd.DataFrame(mgnrega_txns)
-df_mgn.to_csv('transactions_mgnrega.csv', index=False)
+df_mgn.to_csv('data/transactions_mgnrega.csv', index=False)
 print("   ✅ transactions_mgnrega.csv created.")
 
 
@@ -158,7 +158,7 @@ for i in range(NUM_PMJAY_TXNS):
     pmjay_txns.append(txn)
 
 df_pmjay = pd.DataFrame(pmjay_txns)
-df_pmjay.to_csv('transactions_pmjay.csv', index=False)
+df_pmjay.to_csv('data/transactions_pmjay.csv', index=False)
 print("   ✅ transactions_pmjay.csv created.")
 
 print("\n🎉 Phase 1 Complete. Data is ready for your Agents.")
