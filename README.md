@@ -35,7 +35,6 @@ We have successfully established a 3-stage automated pipeline:
 We are following a "Domain-by-Domain" development strategy:
 
     Step 1: Finish Domain 1 (Beneficiaries) by adding Rules 2, 3, and 4. (✅done)
-    <img width="638" height="386" alt="image" src="https://github.com/user-attachments/assets/bae41d16-a9a6-4980-b0be-b9155b7c1af9" />
 
 
     Step 2: Build Domain 2 (MGNREGA) logic for Labor Fraud.
