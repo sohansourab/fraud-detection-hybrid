@@ -1,5 +1,5 @@
 clean md:
-# 🔍 Fraud Detection Agent - Project Summary
+# 🔍 Fraud Detection non Agent - Project Summary
 
 ## 📋 Overview
 
