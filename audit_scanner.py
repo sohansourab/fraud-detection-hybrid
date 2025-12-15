@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
 """
-Civil Registry Fraud Scanner - Optimized Implementation
-Detects identity fraud patterns in beneficiaries data using 4 deterministic rules.
+Multi-Domain Fraud Scanner - Optimized Implementation
+Detects fraud patterns across 3 domains using 12 deterministic rules.
+
+Domain 1: Civil Registry (Identity Fraud) - Rules 1-4
+Domain 2: Labor Fraud (MGNREGA) - Rules 5-8
+Domain 3: Medical Fraud (PM-JAY) - Rules 9-12
 """
 
 import pandas as pd
 import json
 from pathlib import Path
-from typing import Dict, List, Any
-from dataclasses import dataclass, asdict
+from typing import Dict, List, Any, Optional
+from dataclasses import dataclass
 from collections import Counter
+from datetime import datetime
 import logging
 
 # Configure logging
@@ -17,44 +22,48 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class FraudFlag:
-    """Represents a single fraud detection flag."""
-    rule_id: str
-    rule_name: str
-    description: str
-    risk_score: int
-
+# =============================================================================
+# DATA CLASSES
+# =============================================================================
 
 @dataclass
 class FraudReport:
-    """Represents a fraud report for a single beneficiary."""
-    beneficiary_id: str
-    name: str
+    """Represents a fraud report for a single record."""
+    record_id: str
+    record_name: str
+    domain: str
     flags: List[Dict[str, Any]]
     total_risk_score: int
     
     def to_dict(self) -> Dict[str, Any]:
         return {
-            "beneficiary_id": self.beneficiary_id,
-            "name": self.name,
+            "record_id": self.record_id,
+            "record_name": self.record_name,
+            "domain": self.domain,
             "flags": self.flags,
             "total_risk_score": self.total_risk_score
         }
 
 
-class CivilRegistryFraudScanner:
+# =============================================================================
+# DOMAIN 1: CIVIL REGISTRY (IDENTITY FRAUD)
+# =============================================================================
+
+class CivilRegistryScanner:
     """
-    Optimized fraud scanner for Civil Registry (Identity Fraud Detection).
+    Domain 1: Civil Registry Fraud Scanner
+    Target: data/beneficiaries.csv
     
-    Implements 4 deterministic rules:
-    1. Invalid Mobile Number (9999999999)
-    2. Underage with Job Card (Age < 18 with JobCardID)
-    3. Suspicious Age (>100 years)
-    4. Mega Family (>15 members per FamilyID)
+    Rules:
+    - Rule 1: Invalid Mobile Number (9999999999)
+    - Rule 2: Underage with Job Card (Age < 18)
+    - Rule 3: Suspicious Age (>100 years)
+    - Rule 4: Mega Family (>15 members)
     """
     
-    # Rule Configuration Constants
+    DOMAIN = "Civil Registry"
+    DATA_PATH = "data/beneficiaries.csv"
+    
     RULES = {
         "RULE_001": {
             "name": "Invalid Mobile Number",
@@ -88,94 +97,48 @@ class CivilRegistryFraudScanner:
     MAX_NORMAL_AGE = 100
     MAX_FAMILY_SIZE = 15
     
-    def __init__(self, data_path: str):
-        """Initialize scanner with data path."""
-        self.data_path = Path(data_path)
+    def __init__(self):
         self.df: pd.DataFrame = None
         self.family_counts: Dict[str, int] = {}
         self.fraud_reports: List[FraudReport] = []
-        
+    
     def load_data(self) -> bool:
-        """Load and validate beneficiaries data."""
         try:
-            self.df = pd.read_csv(self.data_path, dtype={
+            self.df = pd.read_csv(self.DATA_PATH, dtype={
                 'BeneficiaryID': str,
                 'Name': str,
-                'Age': 'Int64',  # Nullable integer
+                'Age': 'Int64',
+                'Gender': str,
                 'MobileNumber': str,
                 'JobCardID': str,
                 'FamilyID': str
             })
-            
-            # Normalize mobile numbers - remove non-digits and strip
             self.df['MobileNumber'] = (
                 self.df['MobileNumber']
                 .astype(str)
-                .str.replace(r'\D', '', regex=True)  # Remove non-digits
+                .str.replace(r'\D', '', regex=True)
                 .str.strip()
             )
-            
-            logger.info(f"Loaded {len(self.df)} beneficiary records")
+            logger.info(f"[Civil Registry] Loaded {len(self.df)} records")
             return True
-            
         except Exception as e:
-            logger.error(f"Failed to load data: {e}")
+            logger.error(f"[Civil Registry] Failed to load: {e}")
             return False
     
-    def _precompute_family_sizes(self) -> None:
-        """Pre-compute family sizes for O(1) lookup - Rule 4 optimization."""
-        self.family_counts = Counter(
-            self.df['FamilyID'].dropna().astype(str)
-        )
-        logger.info(f"Pre-computed sizes for {len(self.family_counts)} families")
-    
-    def _check_rule_001(self, mobile: str) -> bool:
-        """Rule 1: Invalid Mobile Number (9999999999)."""
-        return mobile == self.DUMMY_MOBILE
-    
-    def _check_rule_002(self, age: int, job_card_id: Any) -> bool:
-        """Rule 2: Underage with Job Card."""
-        if pd.isna(age):
-            return False
-        has_job_card = pd.notna(job_card_id) and str(job_card_id).strip() != ''
-        return age < self.MIN_ADULT_AGE and has_job_card
-    
-    def _check_rule_003(self, age: int) -> bool:
-        """Rule 3: Suspicious Age (>100)."""
-        if pd.isna(age):
-            return False
-        return age > self.MAX_NORMAL_AGE
-    
-    def _check_rule_004(self, family_id: str) -> bool:
-        """Rule 4: Mega Family (>15 members)."""
-        if pd.isna(family_id):
-            return False
-        return self.family_counts.get(str(family_id), 0) > self.MAX_FAMILY_SIZE
+    def _precompute_family_sizes(self):
+        self.family_counts = Counter(self.df['FamilyID'].dropna().astype(str))
     
     def scan(self) -> List[FraudReport]:
-        """
-        Execute O(N) linear scan applying all 4 rules.
-        
-        Returns:
-            List of FraudReport objects for flagged beneficiaries.
-        """
         if self.df is None:
-            raise RuntimeError("Data not loaded. Call load_data() first.")
+            raise RuntimeError("Data not loaded")
         
-        # Pre-compute family sizes for Rule 4
         self._precompute_family_sizes()
-        
         self.fraud_reports = []
-        flagged_count = 0
-        
-        # Vectorized pre-filtering for potential optimization hints
-        # (Still doing row-by-row for clear rule application)
         
         for _, row in self.df.iterrows():
             flags = []
             
-            # Extract values once per row
-            beneficiary_id = str(row['BeneficiaryID'])
+            ben_id = str(row['BeneficiaryID'])
             name = str(row['Name'])
             mobile = str(row['MobileNumber'])
             age = row['Age']
@@ -183,7 +146,7 @@ class CivilRegistryFraudScanner:
             family_id = row['FamilyID']
             
             # Rule 1: Invalid Mobile Number
-            if self._check_rule_001(mobile):
+            if mobile == self.DUMMY_MOBILE:
                 flags.append({
                     "rule_id": "RULE_001",
                     **self.RULES["RULE_001"],
@@ -191,18 +154,16 @@ class CivilRegistryFraudScanner:
                 })
             
             # Rule 2: Underage with Job Card
-            if self._check_rule_002(age, job_card_id):
-                flags.append({
-                    "rule_id": "RULE_002",
-                    **self.RULES["RULE_002"],
-                    "evidence": {
-                        "age": int(age),
-                        "job_card_id": str(job_card_id)
-                    }
-                })
+            if pd.notna(age) and age < self.MIN_ADULT_AGE:
+                if pd.notna(job_card_id) and str(job_card_id).strip():
+                    flags.append({
+                        "rule_id": "RULE_002",
+                        **self.RULES["RULE_002"],
+                        "evidence": {"age": int(age), "job_card_id": str(job_card_id)}
+                    })
             
             # Rule 3: Suspicious Age
-            if self._check_rule_003(age):
+            if pd.notna(age) and age > self.MAX_NORMAL_AGE:
                 flags.append({
                     "rule_id": "RULE_003",
                     **self.RULES["RULE_003"],
@@ -210,45 +171,414 @@ class CivilRegistryFraudScanner:
                 })
             
             # Rule 4: Mega Family
-            if self._check_rule_004(family_id):
+            if pd.notna(family_id):
                 family_size = self.family_counts.get(str(family_id), 0)
+                if family_size > self.MAX_FAMILY_SIZE:
+                    flags.append({
+                        "rule_id": "RULE_004",
+                        **self.RULES["RULE_004"],
+                        "evidence": {"family_id": str(family_id), "family_size": family_size}
+                    })
+            
+            if flags:
+                total_risk = sum(f['risk_score'] for f in flags)
+                self.fraud_reports.append(FraudReport(
+                    record_id=ben_id,
+                    record_name=name,
+                    domain=self.DOMAIN,
+                    flags=flags,
+                    total_risk_score=total_risk
+                ))
+        
+        logger.info(f"[Civil Registry] Flagged {len(self.fraud_reports)} records")
+        return self.fraud_reports
+
+
+# =============================================================================
+# DOMAIN 2: LABOR FRAUD (MGNREGA)
+# =============================================================================
+
+class MGNREGAScanner:
+    """
+    Domain 2: Labor Fraud Scanner (MGNREGA)
+    Target: data/transactions_mgnrega.csv
+    
+    Rules:
+    - Rule 5: Impossible Human (DaysWorked > 15)
+    - Rule 6: Ghost Project (WorkCode ends with _000)
+    - Rule 7: Wage Theft (TotalAmount != Days * Wage)
+    - Rule 8: Free Money (Days == 0 AND Amount > 0)
+    """
+    
+    DOMAIN = "MGNREGA Labor"
+    DATA_PATH = "data/transactions_mgnrega.csv"
+    
+    RULES = {
+        "RULE_005": {
+            "name": "Impossible Human",
+            "pattern": "Overtime Fraud",
+            "risk_score": 25,
+            "description": "DaysWorked > 15 in a muster roll cycle - physically impossible"
+        },
+        "RULE_006": {
+            "name": "Ghost Project",
+            "pattern": "Fake Infrastructure",
+            "risk_score": 25,
+            "description": "WorkCode ends with _000 - non-existent project used to siphon funds"
+        },
+        "RULE_007": {
+            "name": "Wage Theft",
+            "pattern": "Amount Mismatch",
+            "risk_score": 25,
+            "description": "TotalAmount != DaysWorked * WageRate - embezzlement detected"
+        },
+        "RULE_008": {
+            "name": "Free Money",
+            "pattern": "Zero Work Payment",
+            "risk_score": 25,
+            "description": "Payment made with zero days worked - direct theft"
+        }
+    }
+    
+    # Thresholds
+    MAX_DAYS_PER_CYCLE = 15
+    GHOST_PROJECT_SUFFIX = "_000"
+    
+    def __init__(self):
+        self.df: pd.DataFrame = None
+        self.fraud_reports: List[FraudReport] = []
+    
+    def load_data(self) -> bool:
+        try:
+            self.df = pd.read_csv(self.DATA_PATH, dtype={
+                'TransactionID': str,
+                'JobCardID': str,
+                'WorkCode': str,
+                'MusterRollID': str,
+                'DaysWorked': 'Int64',
+                'WageRate': 'Int64',
+                'TotalAmount': 'Int64'
+            })
+            logger.info(f"[MGNREGA] Loaded {len(self.df)} transactions")
+            return True
+        except Exception as e:
+            logger.error(f"[MGNREGA] Failed to load: {e}")
+            return False
+    
+    def scan(self) -> List[FraudReport]:
+        if self.df is None:
+            raise RuntimeError("Data not loaded")
+        
+        self.fraud_reports = []
+        
+        for _, row in self.df.iterrows():
+            flags = []
+            
+            txn_id = str(row['TransactionID'])
+            job_card_id = str(row['JobCardID'])
+            work_code = str(row['WorkCode'])
+            days_worked = row['DaysWorked'] if pd.notna(row['DaysWorked']) else 0
+            wage_rate = row['WageRate'] if pd.notna(row['WageRate']) else 0
+            total_amount = row['TotalAmount'] if pd.notna(row['TotalAmount']) else 0
+            
+            # Rule 5: Impossible Human (Days > 15)
+            if days_worked > self.MAX_DAYS_PER_CYCLE:
                 flags.append({
-                    "rule_id": "RULE_004",
-                    **self.RULES["RULE_004"],
+                    "rule_id": "RULE_005",
+                    **self.RULES["RULE_005"],
+                    "evidence": {"days_worked": int(days_worked), "max_allowed": self.MAX_DAYS_PER_CYCLE}
+                })
+            
+            # Rule 6: Ghost Project (WorkCode ends with _000)
+            if work_code.endswith(self.GHOST_PROJECT_SUFFIX):
+                flags.append({
+                    "rule_id": "RULE_006",
+                    **self.RULES["RULE_006"],
+                    "evidence": {"work_code": work_code}
+                })
+            
+            # Rule 7: Wage Theft (Amount mismatch)
+            expected_amount = days_worked * wage_rate
+            if total_amount != expected_amount and days_worked > 0:
+                flags.append({
+                    "rule_id": "RULE_007",
+                    **self.RULES["RULE_007"],
                     "evidence": {
-                        "family_id": str(family_id),
-                        "family_size": family_size
+                        "days_worked": int(days_worked),
+                        "wage_rate": int(wage_rate),
+                        "expected_amount": int(expected_amount),
+                        "actual_amount": int(total_amount),
+                        "discrepancy": int(total_amount - expected_amount)
                     }
                 })
             
-            # Only create report if at least one flag triggered
+            # Rule 8: Free Money (0 days but payment made)
+            if days_worked == 0 and total_amount > 0:
+                flags.append({
+                    "rule_id": "RULE_008",
+                    **self.RULES["RULE_008"],
+                    "evidence": {"days_worked": 0, "amount_paid": int(total_amount)}
+                })
+            
             if flags:
                 total_risk = sum(f['risk_score'] for f in flags)
-                report = FraudReport(
-                    beneficiary_id=beneficiary_id,
-                    name=name,
+                self.fraud_reports.append(FraudReport(
+                    record_id=txn_id,
+                    record_name=f"JobCard: {job_card_id}",
+                    domain=self.DOMAIN,
                     flags=flags,
                     total_risk_score=total_risk
-                )
-                self.fraud_reports.append(report)
-                flagged_count += 1
+                ))
         
-        logger.info(f"Scan complete: {flagged_count} suspicious records out of {len(self.df)}")
+        logger.info(f"[MGNREGA] Flagged {len(self.fraud_reports)} transactions")
         return self.fraud_reports
+
+
+# =============================================================================
+# DOMAIN 3: MEDICAL FRAUD (PM-JAY)
+# =============================================================================
+
+class PMJAYScanner:
+    """
+    Domain 3: Medical Fraud Scanner (PM-JAY)
+    Target: data/transactions_pmjay.csv
     
-    def get_summary(self) -> Dict[str, Any]:
-        """Generate summary statistics of the scan."""
-        if not self.fraud_reports:
-            return {"status": "no_flags", "total_records": len(self.df) if self.df is not None else 0}
+    Rules:
+    - Rule 9: Time Travel (DischargeDate < AdmissionDate)
+    - Rule 10: Biological Mismatch (Male claiming Hysterectomy)
+    - Rule 11: Massive Upcoding (General Ward > 50,000)
+    - Rule 12: Blacklisted Hospital (HospitalID == HOSP_999)
+    """
+    
+    DOMAIN = "PM-JAY Medical"
+    DATA_PATH = "data/transactions_pmjay.csv"
+    BENEFICIARIES_PATH = "data/beneficiaries.csv"
+    
+    RULES = {
+        "RULE_009": {
+            "name": "Time Travel",
+            "pattern": "Impossible Dates",
+            "risk_score": 25,
+            "description": "DischargeDate before AdmissionDate - fake/backdated claim"
+        },
+        "RULE_010": {
+            "name": "Biological Mismatch",
+            "pattern": "Gender Procedure Fraud",
+            "risk_score": 25,
+            "description": "Male patient claiming Hysterectomy - impossible procedure"
+        },
+        "RULE_011": {
+            "name": "Massive Upcoding",
+            "pattern": "Billing Fraud",
+            "risk_score": 25,
+            "description": "General Ward/Consultation costing > Rs.50,000 - inflated billing"
+        },
+        "RULE_012": {
+            "name": "Blacklisted Hospital",
+            "pattern": "Banned Entity",
+            "risk_score": 25,
+            "description": "Claim from blacklisted hospital HOSP_999"
+        }
+    }
+    
+    # Thresholds
+    MAX_GENERAL_WARD_COST = 50000
+    BLACKLISTED_HOSPITAL = "HOSP_999"
+    FEMALE_ONLY_PROCEDURES = ["Hysterectomy"]
+    GENERAL_PROCEDURES = ["General Ward", "General Consultation"]
+    
+    def __init__(self):
+        self.df: pd.DataFrame = None
+        self.beneficiaries_df: pd.DataFrame = None
+        self.gender_map: Dict[str, str] = {}
+        self.fraud_reports: List[FraudReport] = []
+    
+    def load_data(self) -> bool:
+        try:
+            # Load PM-JAY transactions
+            self.df = pd.read_csv(self.DATA_PATH, dtype={
+                'ClaimID': str,
+                'BeneficiaryID': str,
+                'HospitalID': str,
+                'ProcedureName': str,
+                'ClaimAmount': 'Int64',
+                'PatientStatus': str
+            }, parse_dates=['AdmissionDate', 'DischargeDate'])
+            
+            # Load beneficiaries for gender lookup
+            self.beneficiaries_df = pd.read_csv(self.BENEFICIARIES_PATH, dtype={
+                'BeneficiaryID': str,
+                'Gender': str
+            }, usecols=['BeneficiaryID', 'Gender'])
+            
+            # Create gender lookup map
+            self.gender_map = dict(zip(
+                self.beneficiaries_df['BeneficiaryID'],
+                self.beneficiaries_df['Gender']
+            ))
+            
+            logger.info(f"[PM-JAY] Loaded {len(self.df)} claims")
+            return True
+        except Exception as e:
+            logger.error(f"[PM-JAY] Failed to load: {e}")
+            return False
+    
+    def scan(self) -> List[FraudReport]:
+        if self.df is None:
+            raise RuntimeError("Data not loaded")
         
+        self.fraud_reports = []
+        
+        for _, row in self.df.iterrows():
+            flags = []
+            
+            claim_id = str(row['ClaimID'])
+            ben_id = str(row['BeneficiaryID'])
+            hospital_id = str(row['HospitalID'])
+            procedure = str(row['ProcedureName'])
+            claim_amount = row['ClaimAmount'] if pd.notna(row['ClaimAmount']) else 0
+            admission_date = row['AdmissionDate']
+            discharge_date = row['DischargeDate']
+            
+            # Get gender from beneficiaries
+            gender = self.gender_map.get(ben_id, 'Unknown')
+            
+            # Rule 9: Time Travel (Discharge before Admission)
+            if pd.notna(admission_date) and pd.notna(discharge_date):
+                if discharge_date < admission_date:
+                    flags.append({
+                        "rule_id": "RULE_009",
+                        **self.RULES["RULE_009"],
+                        "evidence": {
+                            "admission_date": str(admission_date.date()),
+                            "discharge_date": str(discharge_date.date())
+                        }
+                    })
+            
+            # Rule 10: Biological Mismatch (Male + Hysterectomy)
+            if gender == 'M' and procedure in self.FEMALE_ONLY_PROCEDURES:
+                flags.append({
+                    "rule_id": "RULE_010",
+                    **self.RULES["RULE_010"],
+                    "evidence": {
+                        "gender": "Male",
+                        "procedure": procedure
+                    }
+                })
+            
+            # Rule 11: Massive Upcoding (General Ward > 50k)
+            if procedure in self.GENERAL_PROCEDURES and claim_amount > self.MAX_GENERAL_WARD_COST:
+                flags.append({
+                    "rule_id": "RULE_011",
+                    **self.RULES["RULE_011"],
+                    "evidence": {
+                        "procedure": procedure,
+                        "claim_amount": int(claim_amount),
+                        "threshold": self.MAX_GENERAL_WARD_COST
+                    }
+                })
+            
+            # Rule 12: Blacklisted Hospital
+            if hospital_id == self.BLACKLISTED_HOSPITAL:
+                flags.append({
+                    "rule_id": "RULE_012",
+                    **self.RULES["RULE_012"],
+                    "evidence": {"hospital_id": hospital_id}
+                })
+            
+            if flags:
+                total_risk = sum(f['risk_score'] for f in flags)
+                self.fraud_reports.append(FraudReport(
+                    record_id=claim_id,
+                    record_name=f"Beneficiary: {ben_id} | Hospital: {hospital_id}",
+                    domain=self.DOMAIN,
+                    flags=flags,
+                    total_risk_score=total_risk
+                ))
+        
+        logger.info(f"[PM-JAY] Flagged {len(self.fraud_reports)} claims")
+        return self.fraud_reports
+
+
+# =============================================================================
+# MASTER SCANNER - ORCHESTRATOR
+# =============================================================================
+
+class MasterFraudScanner:
+    """
+    Master Fraud Scanner - Orchestrates all domain scanners.
+    
+    Domains:
+    1. Civil Registry (Identity Fraud) - 4 rules
+    2. MGNREGA (Labor Fraud) - 4 rules
+    3. PM-JAY (Medical Fraud) - 4 rules
+    
+    Total: 12 deterministic rules
+    """
+    
+    OUTPUT_PATH = "output/reports/fraud_report.json"
+    
+    def __init__(self):
+        self.civil_scanner = CivilRegistryScanner()
+        self.mgnrega_scanner = MGNREGAScanner()
+        self.pmjay_scanner = PMJAYScanner()
+        self.all_reports: List[FraudReport] = []
+        self.domain_summaries: Dict[str, Dict] = {}
+    
+    def run_all_scans(self) -> None:
+        """Execute all domain scans."""
+        print("\n" + "="*70)
+        print("  MULTI-DOMAIN FRAUD DETECTION SYSTEM")
+        print("  12 Rules | 3 Domains | O(N) Linear Scan")
+        print("="*70 + "\n")
+        
+        # Domain 1: Civil Registry
+        print("[1/3] Scanning Civil Registry (Identity Fraud)...")
+        if self.civil_scanner.load_data():
+            civil_reports = self.civil_scanner.scan()
+            self.all_reports.extend(civil_reports)
+            self.domain_summaries["Civil Registry"] = {
+                "records_scanned": len(self.civil_scanner.df),
+                "flagged": len(civil_reports),
+                "rules": list(self.civil_scanner.RULES.keys())
+            }
+        
+        # Domain 2: MGNREGA
+        print("[2/3] Scanning MGNREGA Transactions (Labor Fraud)...")
+        if self.mgnrega_scanner.load_data():
+            mgnrega_reports = self.mgnrega_scanner.scan()
+            self.all_reports.extend(mgnrega_reports)
+            self.domain_summaries["MGNREGA Labor"] = {
+                "records_scanned": len(self.mgnrega_scanner.df),
+                "flagged": len(mgnrega_reports),
+                "rules": list(self.mgnrega_scanner.RULES.keys())
+            }
+        
+        # Domain 3: PM-JAY
+        print("[3/3] Scanning PM-JAY Claims (Medical Fraud)...")
+        if self.pmjay_scanner.load_data():
+            pmjay_reports = self.pmjay_scanner.scan()
+            self.all_reports.extend(pmjay_reports)
+            self.domain_summaries["PM-JAY Medical"] = {
+                "records_scanned": len(self.pmjay_scanner.df),
+                "flagged": len(pmjay_reports),
+                "rules": list(self.pmjay_scanner.RULES.keys())
+            }
+    
+    def get_master_summary(self) -> Dict[str, Any]:
+        """Generate master summary across all domains."""
+        total_scanned = sum(d.get("records_scanned", 0) for d in self.domain_summaries.values())
+        total_flagged = len(self.all_reports)
+        
+        # Rule breakdown across all domains
         rule_counts = Counter()
-        risk_distribution = {"low": 0, "medium": 0, "high": 0, "critical": 0}
-        
-        for report in self.fraud_reports:
+        for report in self.all_reports:
             for flag in report.flags:
                 rule_counts[flag['rule_id']] += 1
-            
-            # Risk categorization
+        
+        # Risk distribution
+        risk_distribution = {"low": 0, "medium": 0, "high": 0, "critical": 0}
+        for report in self.all_reports:
             if report.total_risk_score <= 25:
                 risk_distribution["low"] += 1
             elif report.total_risk_score <= 50:
@@ -258,77 +588,110 @@ class CivilRegistryFraudScanner:
             else:
                 risk_distribution["critical"] += 1
         
+        # All rules from all scanners
+        all_rules = {
+            **self.civil_scanner.RULES,
+            **self.mgnrega_scanner.RULES,
+            **self.pmjay_scanner.RULES
+        }
+        
         return {
-            "total_records_scanned": len(self.df),
-            "total_flagged": len(self.fraud_reports),
-            "flag_rate": f"{(len(self.fraud_reports) / len(self.df) * 100):.2f}%",
+            "total_records_scanned": total_scanned,
+            "total_flagged": total_flagged,
+            "flag_rate": f"{(total_flagged / total_scanned * 100):.2f}%" if total_scanned > 0 else "0%",
+            "domain_breakdown": self.domain_summaries,
             "rule_breakdown": {
                 rule_id: {
-                    "name": self.RULES[rule_id]["name"],
+                    "name": all_rules[rule_id]["name"],
                     "count": count
                 }
-                for rule_id, count in rule_counts.items()
+                for rule_id, count in sorted(rule_counts.items())
             },
             "risk_distribution": risk_distribution
         }
     
-    def export_json(self, output_path: str) -> None:
-        """Export fraud reports to JSON file."""
+    def export_json(self) -> None:
+        """Export all fraud reports to JSON."""
+        Path(self.OUTPUT_PATH).parent.mkdir(parents=True, exist_ok=True)
+        
         output = {
             "scan_metadata": {
-                "source_file": str(self.data_path),
-                "total_records": len(self.df),
-                "rules_applied": list(self.RULES.keys())
+                "scan_timestamp": datetime.now().isoformat(),
+                "domains_scanned": list(self.domain_summaries.keys()),
+                "total_rules": 12,
+                "rules_applied": [
+                    *self.civil_scanner.RULES.keys(),
+                    *self.mgnrega_scanner.RULES.keys(),
+                    *self.pmjay_scanner.RULES.keys()
+                ]
             },
-            "summary": self.get_summary(),
-            "flagged_beneficiaries": [r.to_dict() for r in self.fraud_reports]
+            "summary": self.get_master_summary(),
+            "flagged_records": [r.to_dict() for r in self.all_reports]
         }
         
-        with open(output_path, 'w') as f:
+        with open(self.OUTPUT_PATH, 'w') as f:
             json.dump(output, f, indent=2)
         
-        logger.info(f"Exported report to {output_path}")
+        logger.info(f"Exported master report to {self.OUTPUT_PATH}")
+    
+    def print_report(self) -> None:
+        """Print formatted report to console."""
+        summary = self.get_master_summary()
+        
+        print("\n" + "="*70)
+        print("  FRAUD DETECTION REPORT")
+        print("="*70)
+        
+        print(f"\n[OVERVIEW]")
+        print(f"  Total Records Scanned: {summary['total_records_scanned']:,}")
+        print(f"  Total Flagged: {summary['total_flagged']:,} ({summary['flag_rate']})")
+        
+        print(f"\n[DOMAIN BREAKDOWN]")
+        for domain, data in summary['domain_breakdown'].items():
+            flag_rate = (data['flagged'] / data['records_scanned'] * 100) if data['records_scanned'] > 0 else 0
+            print(f"  * {domain}: {data['flagged']:,} / {data['records_scanned']:,} ({flag_rate:.2f}%)")
+        
+        print(f"\n[RULE BREAKDOWN]")
+        for rule_id, data in summary['rule_breakdown'].items():
+            print(f"  * {rule_id}: {data['name']} - {data['count']:,} flags")
+        
+        print(f"\n[RISK DISTRIBUTION]")
+        for level, count in summary['risk_distribution'].items():
+            print(f"  * {level.upper()}: {count:,}")
+        
+        print("\n" + "="*70)
+        
+        # Top 10 highest risk cases
+        if self.all_reports:
+            print("\n[TOP 10 HIGHEST RISK CASES]")
+            sorted_reports = sorted(self.all_reports, key=lambda x: x.total_risk_score, reverse=True)[:10]
+            for i, report in enumerate(sorted_reports, 1):
+                print(f"\n  {i}. [{report.domain}] {report.record_id}")
+                print(f"     {report.record_name}")
+                print(f"     Risk Score: {report.total_risk_score}")
+                print(f"     Flags: {[f['rule_id'] for f in report.flags]}")
+        
+        print("\n" + "="*70)
 
+
+# =============================================================================
+# MAIN EXECUTION
+# =============================================================================
 
 def main():
     """Main execution function."""
-    # Initialize scanner
-    scanner = CivilRegistryFraudScanner("data/beneficiaries.csv")
+    scanner = MasterFraudScanner()
     
-    # Load data
-    if not scanner.load_data():
-        logger.error("Failed to load data. Exiting.")
-        return
+    # Run all domain scans
+    scanner.run_all_scans()
     
-    # Execute scan
-    fraud_reports = scanner.scan()
-    
-    # Print summary
-    summary = scanner.get_summary()
-    print("\n" + "="*60)
-    print("📊 CIVIL REGISTRY FRAUD SCAN REPORT")
-    print("="*60)
-    print(f"Total Records Scanned: {summary['total_records_scanned']}")
-    print(f"Flagged Records: {summary['total_flagged']} ({summary['flag_rate']})")
-    print("\n📋 Rule Breakdown:")
-    for rule_id, data in summary.get('rule_breakdown', {}).items():
-        print(f"  • {data['name']}: {data['count']} flags")
-    print("\n⚠️ Risk Distribution:")
-    for level, count in summary.get('risk_distribution', {}).items():
-        print(f"  • {level.upper()}: {count}")
-    print("="*60)
+    # Print report to console
+    scanner.print_report()
     
     # Export to JSON
-    scanner.export_json("fraud_report.json")
+    scanner.export_json()
     
-    # Show top 5 highest risk cases
-    if fraud_reports:
-        print("\n🚨 TOP 5 HIGHEST RISK CASES:")
-        sorted_reports = sorted(fraud_reports, key=lambda x: x.total_risk_score, reverse=True)[:5]
-        for i, report in enumerate(sorted_reports, 1):
-            print(f"\n{i}. {report.beneficiary_id} - {report.name}")
-            print(f"   Risk Score: {report.total_risk_score}")
-            print(f"   Flags: {[f['rule_id'] for f in report.flags]}")
+    print(f"\n[SUCCESS] Report exported to: {scanner.OUTPUT_PATH}")
 
 
 if __name__ == "__main__":
