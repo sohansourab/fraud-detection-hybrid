@@ -16,7 +16,7 @@ grpcio-status==1.71.2
 httplib2==0.31.0
 idna==3.11
 numpy==2.3.5
-pandas==2.3.3
+pandas
 proto-plus==1.26.1
 protobuf==5.29.5
 pyasn1==0.6.1
@@ -29,6 +29,7 @@ python-dotenv==1.2.1
 pytz==2025.2
 requests==2.32.5
 rsa==4.9.1
+scikit-learn
 six==1.17.0
 tqdm==4.67.1
 typing-inspection==0.4.2
