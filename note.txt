@@ -13,3 +13,13 @@ output/reports/fraud_report.json
 show_cause_generator.py
         ↓
 output/notices/*.pdf
+
+
+agents:
+root agent:
+score 
+subj
+rule
+agent :
+suggest actions
+3rd agent : notice generator
