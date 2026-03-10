@@ -4,7 +4,7 @@
 
 A comprehensive **hybrid fraud detection system** combining **deterministic rule-based scanning** (16 rules) and **ML-based anomaly detection** for Indian Government welfare schemes. The system scans beneficiary and transaction data across 3 domains to identify fraud patterns and automatically generates legal notices.
 
-**Approach:** Option C - Hybrid (Deterministic Rules + Machine Learning)
+**Approach:**  Hybrid (Deterministic Rules + Machine Learning)
 
 ---
 
