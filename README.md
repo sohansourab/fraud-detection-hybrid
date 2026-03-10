@@ -316,26 +316,6 @@ Contributions welcome! Areas of interest:
 
 ---
 
-## 📄 License
 
-MIT License - See LICENSE file for details
-
----
-
-## 👥 Authors
-
-Built for the Digital India Initiative - Fraud Detection Unit
-
-**Project Type:** Deterministic + ML Hybrid Fraud Detection System
-
-**Tech Stack:** Python, Pandas, scikit-learn, FPDF2, Faker
-
----
-
-## 📞 Contact
-
-For questions or collaboration: [Your Contact Info]
-
----
 
 **⚠️ Disclaimer:** This is a demonstration system using synthetic data. For production use, integrate with actual government databases and legal frameworks.
