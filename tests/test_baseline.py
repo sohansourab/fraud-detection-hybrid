@@ -1,7 +1,9 @@
-"""Regression guard: config extraction must not change detection output.
+"""Regression guard for detection output.
 
 Re-runs the scanner and asserts the flagged record ids per rule match the
-snapshot captured *before* the refactor (``baseline/flags_before.json``).
+current snapshot (``baseline/flags_after_p1d.json``). The original snapshot
+(``baseline/flags_before.json``) is kept as history; see
+``reports/baseline_diff.md`` for the intentional changes made in P1d.
 """
 from __future__ import annotations
 
@@ -15,7 +17,7 @@ if str(REPO_ROOT) not in sys.path:
 
 import audit_scanner  # noqa: E402
 
-BASELINE_PATH = Path(__file__).resolve().parent / "baseline" / "flags_before.json"
+BASELINE_PATH = Path(__file__).resolve().parent / "baseline" / "flags_after_p1d.json"
 
 
 def _run_scanner() -> tuple[dict[str, list[str]], int, int]:
