@@ -136,10 +136,20 @@ class CloneDetectionRule(Rule):
         df = tables["beneficiaries"]
         dummy_mobile = cfg.civil_registry.dummy_mobile
         max_mobile_sharing = cfg.civil_registry.max_mobile_sharing
-        mobile = df["MobileNumber"].astype(str)
-        share_counts = mobile[mobile != dummy_mobile].dropna().value_counts()
+        raw_mobile = df["MobileNumber"]
+        mobile = raw_mobile.astype(str).str.strip()
+        # A null/blank mobile is missing data, not a shared identity: it must
+        # never be turned into "nan"/"" and then counted as a shared number.
+        is_valid = (
+            raw_mobile.notna()
+            & mobile.ne("")
+            & mobile.ne("nan")
+            & mobile.ne("none")
+            & mobile.ne(dummy_mobile)
+        )
+        share_counts = mobile[is_valid].value_counts()
         shared_by = mobile.map(share_counts).fillna(0)
-        mask = ((mobile != dummy_mobile) & (shared_by > max_mobile_sharing)).astype(bool)
+        mask = (is_valid & (shared_by > max_mobile_sharing)).astype(bool)
         matched = df[mask]
         rows = [
             (str(ben_id), {"mobile_number": str(row_mobile), "shared_by": int(count)})
