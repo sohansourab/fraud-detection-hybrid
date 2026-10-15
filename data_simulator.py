@@ -13,9 +13,9 @@ Fraud Contamination Rate: Configurable per rule
 
 import pandas as pd
 import random
+import sys
 from faker import Faker
 from datetime import datetime, timedelta
-import uuid
 import json
 from pathlib import Path
 
@@ -23,6 +23,13 @@ from pathlib import Path
 fake = Faker('en_IN')
 Faker.seed(42)  # For reproducibility
 random.seed(42)
+
+# Make the ``src`` package importable so ids are built from the shared config seed.
+_SRC_DIR = Path(__file__).resolve().parent / "src"
+if _SRC_DIR.is_dir() and str(_SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(_SRC_DIR))
+
+from fraud.simulate import aadhaar_hash, make_rng  # noqa: E402
 
 # =============================================================================
 # CONFIGURATION
@@ -78,7 +85,8 @@ def generate_beneficiaries():
     print(f"📋 Generating {NUM_BENEFICIARIES} Beneficiaries (Civil Registry)...")
     
     beneficiaries = []
-    
+    aadhaar_rng = make_rng()  # deterministic Aadhaar hashes (seeded)
+
     # Create family pool (for mega family fraud)
     num_families = int(NUM_BENEFICIARIES / 5)
     family_ids = [f"FAM_{i:05d}" for i in range(num_families)]
@@ -139,7 +147,7 @@ def generate_beneficiaries():
             'Age': age,
             'Gender': gender,
             'MobileNumber': mobile,
-            'AadhaarHash': uuid.uuid4().hex[:12].upper(),
+            'AadhaarHash': aadhaar_hash(aadhaar_rng),
             'FamilyID': family_id,
             'District': random.choice(['Ghotala', 'Bharpur', 'Naqli Nagar']),
             'JobCardID': job_card_id

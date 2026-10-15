@@ -48,4 +48,27 @@ Untouched rules are expected to be identical, and are noted as such.
 - Regression test: `tests/test_rule021_threshold.py` (a 51-claim group fires,
   and the input frame is unchanged).
 
+## Fix 4 - deterministic ids (seeded RNG instead of uuid4)
+
+- Flag-id changes vs `flags_before.json`: **none** (added 0, removed 0).
+- Why no baseline change: `AadhaarHash` (the only uuid user) is not read by any
+  rule, so report ids are unaffected. The fix makes the *generated data*
+  reproducible: two consecutive runs of `data_simulator.py` now produce a
+  byte-identical `beneficiaries.csv` (verified by MD5).
+- New helper `src/fraud/simulate.py` (`make_rng`, `aadhaar_hash`) builds ids from
+  the config seed (42) instead of `uuid.uuid4()`.
+- Regression test: `tests/test_simulate_determinism.py`.
+
+## Summary
+
+Only Rule 025 intentionally changed the flag set:
+
+| rule | before | after | added | removed |
+|---|---|---|---|---|
+| RULE_025 | 99 | 616 | 517 | 0 |
+| all other rules | (unchanged) | (unchanged) | 0 | 0 |
+
+Totals: flags 2044 -> 2561; flagged records 1776 -> 1776.
+
+
 
