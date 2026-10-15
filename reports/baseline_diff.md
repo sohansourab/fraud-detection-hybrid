@@ -114,6 +114,45 @@ the wrong beneficiary. On the synthetic data 1,406 of 1,407 pairs were wrong.
 - Total flags: 3339 -> **271**; flagged records 2270 -> **249**.
 - Realised prevalence: 244 fraud records / 10087 scannable = **2.42%**.
 
+## P2c - min events per type + cross-scheme injection
+
+Simulator/config only; no rule, detection or evaluation code changed.
+
+- New `simulator.min_events_per_type` (default 10). After prevalence scaling any
+  fraud type below the floor is raised to it, *unless* the raise would push
+  total fraud above `1.5 x prevalence x scannable`. Rows are mutated in place,
+  so the scannable count (and the cap) is unchanged; types that could not be
+  raised are printed with the reason.
+- New `simulator.cross_scheme` (25 beneficiaries; combos Civil+MGNREGA,
+  MGNREGA+PM-JAY, Civil+PM-JAY). Each beneficiary gets a flagged per-domain
+  event in every scheme of its combo (Civil: underage + job card; MGNREGA:
+  DaysWorked > 15; PM-JAY: discharge before admission), all labelled
+  `fraud_type=cross_scheme`, `injected_rule_id=RULE_025`.
+- Old -> new per-type injected events (prevalence 0.02, in-sample):
+
+  | fraud_type | P2b | P2c | | fraud_type | P2b | P2c |
+  |---|---|---|---|---|---|---|
+  | bio_mismatch | 0 | 0 | | mega_family | 16 | 16 |
+  | blacklisted_hospital | 7 | **10** | | mobile_sharing | 5 | 5 |
+  | cross_scheme | 0 | **50** | | muster_cartel | 36 | 36 |
+  | free_money | 16 | 16 | | procedure_mill | 51 | 51 |
+  | ghost_project | 23 | 23 | | suspicious_age | 6 | 6 |
+  | hard_negative_blank_mobile | 40 | 40 | | time_travel | 7 | 7 |
+  | impossible_human | 29 | 29 | | underage_jobcard | 3 | **10** |
+  | invalid_mobile | 7 | 7 | | wage_theft | 34 | 34 |
+  | massive_upcoding | 11 | 11 | | **total** | 291 | 351 |
+
+- Floor at 0.02: raised `blacklisted_hospital` 8->10 and `underage_jobcard`
+  3->10. **Not** raised (cap reached): `bio_mismatch` (0), `invalid_mobile` (7),
+  `mobile_sharing` (5), `suspicious_age` (6), `time_travel` (7) - each would
+  push total fraud above the 1.5x cap (304). These stay "not evaluable".
+- RULE_025 count: before 16 (P2b) -> after **69**. All 50 cross-scheme records
+  are flagged; the 25 injected beneficiaries each resolve to >= 2 schemes with
+  **0 unresolved** links through the exact P1e joins.
+- Total flags: 271 -> **384**; flagged records 249 -> **309**.
+- Realised prevalence: 244/10087 (2.42%) -> 304/10145 (**2.997%**, at the cap).
+- Regression test: `tests/test_cross_scheme.py`.
+
 ## Summary
 
 P1d/P1e changed only Rule 025:
@@ -127,8 +166,9 @@ Totals: flags 2044 -> 2605; flagged records 1776 -> 1776.
 
 Later modules changed the *generated data*, not rule logic: P2a (injections +
 labels) -> RULE_025 890 / total flags 3339; P2b (prevalence 0.02) -> RULE_025
-16 / total flags 271. The current committed snapshot is
-`tests/baseline/flags_after_p1d.json`; see the P2a and P2b sections above.
+16 / total flags 271; P2c (min-events floor + cross-scheme) -> RULE_025 69 /
+total flags 384. The current committed snapshot is
+`tests/baseline/flags_after_p1d.json`; see the P2a, P2b and P2c sections above.
 
 
 

@@ -63,3 +63,15 @@ simulator:
   # Rule 013 hard negatives: fraction of beneficiaries with null/blank mobile.
   # Hard negatives are not fraud, so this is not scaled by prevalence.
   blank_mobile_rate: 0.02
+  # Minimum injected events per fraud type (module P2c). After prevalence
+  # scaling, any type below this floor is raised to it, unless doing so would
+  # push total fraud above 1.5 x prevalence x scannable records.
+  min_events_per_type: 10
+  # Dedicated cross-scheme injection for Rule 025 (module P2c): N beneficiaries
+  # each present (and flagged) in 2-3 schemes, so Rule 025 has a real basis.
+  cross_scheme:
+    beneficiaries: 25
+    combos:
+      - ["Civil Registry", "MGNREGA Labor"]
+      - ["MGNREGA Labor", "PM-JAY Medical"]
+      - ["Civil Registry", "PM-JAY Medical"]

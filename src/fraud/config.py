@@ -89,6 +89,24 @@ class RiskBandsConfig:
 
 
 @dataclass(frozen=True)
+class CrossSchemeConfig:
+    """Dedicated cross-scheme injection for Rule 25 (module P2c).
+
+    ``beneficiaries`` people are placed (and flagged) in each scheme listed in
+    ``combos``, so Rule 25 has a real multi-scheme basis to fire on.
+    """
+
+    beneficiaries: int = 25
+    combos: list[list[str]] = field(
+        default_factory=lambda: [
+            ["Civil Registry", "MGNREGA Labor"],
+            ["MGNREGA Labor", "PM-JAY Medical"],
+            ["Civil Registry", "PM-JAY Medical"],
+        ]
+    )
+
+
+@dataclass(frozen=True)
 class SimulatorConfig:
     """Injection volumes for the synthetic data simulator (module P2a).
 
@@ -106,6 +124,12 @@ class SimulatorConfig:
     blank_mobile_rate: float = 0.02
     # Target fraction of fraud (is_fraud=1) records among scannable records.
     prevalence: float = 0.02
+    # Minimum injected events per fraud type (module P2c). After prevalence
+    # scaling any type below this is raised to the floor, unless doing so would
+    # push total fraud above 1.5 x prevalence x scannable records.
+    min_events_per_type: int = 10
+    # Dedicated cross-scheme injection for Rule 025.
+    cross_scheme: CrossSchemeConfig = field(default_factory=CrossSchemeConfig)
 
 
 @dataclass(frozen=True)

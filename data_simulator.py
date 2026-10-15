@@ -11,9 +11,12 @@ Domains:
 Fraud Contamination Rate: Configurable per rule
 """
 
+import argparse
+import math
 import pandas as pd
 import random
 import sys
+from dataclasses import replace
 from faker import Faker
 from datetime import datetime, timedelta
 import json
@@ -32,6 +35,28 @@ if _SRC_DIR.is_dir() and str(_SRC_DIR) not in sys.path:
 
 from fraud.simulate import aadhaar_hash, make_rng, split_for  # noqa: E402
 from fraud.config import get_config  # noqa: E402
+import fraud.config as _fraud_config  # noqa: E402
+
+
+def _parse_args() -> argparse.Namespace:
+    """CLI overrides. Only used when run as a script (never on import)."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--prevalence",
+        type=float,
+        default=None,
+        help="Override simulator.prevalence for this run (default: config value).",
+    )
+    return parser.parse_args()
+
+
+_ARGS = _parse_args() if __name__ == "__main__" else argparse.Namespace(prevalence=None)
+if _ARGS.prevalence is not None:
+    # Rebuild the cached config so every get_config() call sees the override.
+    _fraud_config._CONFIG = replace(
+        get_config(),
+        simulator=replace(get_config().simulator, prevalence=_ARGS.prevalence),
+    )
 
 # =============================================================================
 # GROUND-TRUTH LABEL BOOKKEEPING
@@ -47,6 +72,9 @@ INJECTIONS: dict[str, list[tuple[str, str]]] = {}
 HARD_NEGATIVES: dict[str, str] = {}
 # fraud_type / rule_id -> number of injected records (actual, not estimated)
 INJECTION_COUNTS: Counter = Counter()
+# Cross-scheme beneficiaries injected for Rule 025 (module P2c). Populated by
+# generate_beneficiaries() and consumed by the MGNREGA / PM-JAY generators.
+CROSS_SCHEME: list[dict] = []
 
 LABEL_COLUMNS = [
     "record_id",
@@ -263,6 +291,33 @@ def generate_beneficiaries():
             beneficiaries[idx]['BeneficiaryID'], 'hard_negative_blank_mobile'
         )
 
+    # --- P2c: dedicated cross-scheme injection for Rule 025 ------------------
+    # Each injected beneficiary is placed (and *flagged*) in every scheme in its
+    # combo, so Rule 025 has a real multi-scheme basis. The Civil event is the
+    # beneficiary row itself (underage + job card -> Rule 002); MGNREGA / PM-JAY
+    # events are added by the downstream generators using the exact ids below.
+    cs_cfg = get_config().simulator.cross_scheme
+    cs_rng = make_rng(get_config().seed + 200)
+    for i in range(cs_cfg.beneficiaries):
+        combo = list(cs_cfg.combos[i % len(cs_cfg.combos)])
+        ben_id = f"BEN_CS_{i:04d}"
+        job_card = f"JC_CS_{i:04d}"
+        in_civil = "Civil Registry" in combo
+        beneficiaries.append({
+            'BeneficiaryID': ben_id,
+            'Name': fake.name(),
+            'Age': cs_rng.randint(5, 17) if in_civil else cs_rng.randint(18, 90),
+            'Gender': cs_rng.choice(['M', 'F', 'O']),
+            'MobileNumber': f"98{cs_rng.randint(10000000, 99999999)}",
+            'AadhaarHash': aadhaar_hash(aadhaar_rng),
+            'FamilyID': f"FAM_CS_{i:04d}",
+            'District': cs_rng.choice(['Ghotala', 'Bharpur', 'Naqli Nagar']),
+            'JobCardID': job_card,
+        })
+        CROSS_SCHEME.append({'ben_id': ben_id, 'job_card': job_card, 'combo': combo})
+        if in_civil:
+            _mark_fraud(ben_id, 'cross_scheme', 'RULE_025')
+
     df = pd.DataFrame(beneficiaries)
     df.to_csv('data/beneficiaries.csv', index=False)
     
@@ -314,9 +369,13 @@ def generate_mgnrega_transactions(df_beneficiaries):
     # appearances == cartel_muster_rolls (> min_cartel_appearances) and pair rate
     # == 1.0 (>= cartel_threshold), so the rule's gate passes.
     sim = get_config().simulator
-    cartel_groups = _build_cartel_groups(valid_job_cards, sim)
+    # Keep cross-scheme job cards out of the random / cartel pools so their only
+    # MGNREGA appearance is the dedicated Rule 025 transaction below.
+    cs_cards = {cs['job_card'] for cs in CROSS_SCHEME}
+    base_pool = [card for card in valid_job_cards if card not in cs_cards] or valid_job_cards
+    cartel_groups = _build_cartel_groups(base_pool, sim)
     cartel_cards = {card for group in cartel_groups for card in group}
-    random_pool = [card for card in valid_job_cards if card not in cartel_cards] or valid_job_cards
+    random_pool = [card for card in base_pool if card not in cartel_cards] or base_pool
     
     for g, cartel_group in enumerate(cartel_groups):
         for r in range(sim.cartel_muster_rolls):
@@ -390,7 +449,26 @@ def generate_mgnrega_transactions(df_beneficiaries):
             'WageRate': wage_rate,
             'TotalAmount': total_amount
         })
-    
+
+    # --- P2c: cross-scheme MGNREGA events (Rule 025) -------------------------
+    for cs in CROSS_SCHEME:
+        if "MGNREGA Labor" not in cs['combo']:
+            continue
+        days_worked = get_config().mgnrega.max_days_per_cycle + 5  # Rule 005
+        wage_rate = 230
+        txn_id = f"TXN_MGN_CS_{cs['ben_id']}"
+        transactions.append({
+            'TransactionID': txn_id,
+            'JobCardID': cs['job_card'],
+            'WorkCode': f"WC_{random.randint(100, 999)}",
+            'MusterRollID': f"MR_CS_{cs['ben_id']}",
+            'WorkStartDate': fake.date_between(start_date='-1y', end_date='today'),
+            'DaysWorked': days_worked,
+            'WageRate': wage_rate,
+            'TotalAmount': days_worked * wage_rate,
+        })
+        _mark_fraud(txn_id, 'cross_scheme', 'RULE_025')
+
     df = pd.DataFrame(transactions)
     df.to_csv('data/transactions_mgnrega.csv', index=False)
     
@@ -512,7 +590,25 @@ def generate_pmjay_transactions(df_beneficiaries):
             })
             fraud_tracker['RULE_021'] += 1
             _mark_fraud(claim_id, 'procedure_mill', 'RULE_021')
-    
+
+    # --- P2c: cross-scheme PM-JAY events (Rule 025) --------------------------
+    for cs in CROSS_SCHEME:
+        if "PM-JAY Medical" not in cs['combo']:
+            continue
+        claim_id = f"CLM_CS_{cs['ben_id']}"
+        admission_date = fake.date_between(start_date='-1y', end_date='today')
+        claims.append({
+            'ClaimID': claim_id,
+            'BeneficiaryID': cs['ben_id'],
+            'HospitalID': f"HOSP_{random.randint(1, 50):03d}",
+            'AdmissionDate': admission_date,
+            'DischargeDate': admission_date - timedelta(days=3),  # Rule 009
+            'ProcedureName': random.choice(procedures['surgery']),
+            'ClaimAmount': random.randint(30000, 100000),
+            'PatientStatus': 'Discharged',
+        })
+        _mark_fraud(claim_id, 'cross_scheme', 'RULE_025')
+
     df = pd.DataFrame(claims)
     df.to_csv('data/transactions_pmjay.csv', index=False)
     
@@ -611,15 +707,211 @@ def write_labels(df_beneficiaries, df_mgnrega, df_pmjay):
     return labels
 
 
-def print_injection_table():
+# =============================================================================
+# MINIMUM EVENTS PER FRAUD TYPE (module P2c)
+# =============================================================================
+
+# Single-record fraud types the floor can top up: fraud_type -> (domain, rule).
+# Structural rules (mega family / cartel / mill / cross-scheme) are floored by
+# their own builders, so they are never thin and are not listed here.
+_TYPE_RULE = {
+    'invalid_mobile': ('civil', 'RULE_001'),
+    'underage_jobcard': ('civil', 'RULE_002'),
+    'suspicious_age': ('civil', 'RULE_003'),
+    'mobile_sharing': ('civil', 'RULE_013'),
+    'impossible_human': ('mgnrega', 'RULE_005'),
+    'ghost_project': ('mgnrega', 'RULE_006'),
+    'wage_theft': ('mgnrega', 'RULE_007'),
+    'free_money': ('mgnrega', 'RULE_008'),
+    'time_travel': ('pmjay', 'RULE_009'),
+    'bio_mismatch': ('pmjay', 'RULE_010'),
+    'massive_upcoding': ('pmjay', 'RULE_011'),
+    'blacklisted_hospital': ('pmjay', 'RULE_012'),
+}
+# Structural / dedicated injections that are floored by their own builders.
+_STRUCTURAL_TYPES = (
+    'mega_family', 'muster_cartel', 'procedure_mill', 'cross_scheme',
+)
+# RULE_013 fires when a mobile is shared by more than max_mobile_sharing (3).
+_SHARING_GROUP_SIZE = 5
+
+
+def _as_date(value):
+    """Return a ``date`` for either a date object or an ISO date string."""
+    if isinstance(value, str):
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    return value
+
+
+def _clean_indices(df, id_col):
+    """Index labels of rows that have no injection and are not hard negatives."""
+    injected = set(INJECTIONS) | set(HARD_NEGATIVES)
+    return [i for i in df.index if str(df.at[i, id_col]) not in injected]
+
+
+def _mutate_civil(df, fraud_type, picks, rng):
+    dummy = get_config().civil_registry.dummy_mobile
+    if fraud_type == 'invalid_mobile':
+        for i in picks:
+            df.at[i, 'MobileNumber'] = dummy
+    elif fraud_type == 'underage_jobcard':
+        for i in picks:
+            df.at[i, 'Age'] = rng.randint(5, 17)
+            if pd.isna(df.at[i, 'JobCardID']) or not str(df.at[i, 'JobCardID']):
+                df.at[i, 'JobCardID'] = f"JC_TOPUP_{i:05d}"
+    elif fraud_type == 'suspicious_age':
+        for i in picks:
+            df.at[i, 'Age'] = rng.randint(101, 150)
+    elif fraud_type == 'mobile_sharing':
+        for start in range(0, len(picks), _SHARING_GROUP_SIZE):
+            shared = f"97{rng.randint(10000000, 99999999)}"
+            for i in picks[start:start + _SHARING_GROUP_SIZE]:
+                df.at[i, 'MobileNumber'] = shared
+
+
+def _mutate_mgnrega(df, fraud_type, picks, rng):
+    if fraud_type == 'impossible_human':
+        for i in picks:
+            days = rng.randint(16, 30)
+            df.at[i, 'DaysWorked'] = days
+            df.at[i, 'TotalAmount'] = days * int(df.at[i, 'WageRate'])
+    elif fraud_type == 'ghost_project':
+        for i in picks:
+            df.at[i, 'WorkCode'] = f"WC_{rng.randint(100, 999)}_000"
+    elif fraud_type == 'wage_theft':
+        for i in picks:
+            expected = int(df.at[i, 'DaysWorked']) * int(df.at[i, 'WageRate'])
+            df.at[i, 'TotalAmount'] = expected + rng.choice(
+                [-2000, -1000, 1000, 2000, 5000]
+            )
+    elif fraud_type == 'free_money':
+        for i in picks:
+            df.at[i, 'DaysWorked'] = 0
+            df.at[i, 'TotalAmount'] = rng.randint(1000, 5000)
+
+
+def _mutate_pmjay(df, df_ben, fraud_type, picks, rng):
+    if fraud_type == 'time_travel':
+        for i in picks:
+            admission = _as_date(df.at[i, 'AdmissionDate'])
+            df.at[i, 'DischargeDate'] = admission - timedelta(days=3)
+    elif fraud_type == 'blacklisted_hospital':
+        hospital = get_config().pmjay.blacklisted_hospital
+        for i in picks:
+            df.at[i, 'HospitalID'] = hospital
+    elif fraud_type == 'massive_upcoding':
+        procedure = get_config().pmjay.general_procedures[0]
+        for i in picks:
+            df.at[i, 'ProcedureName'] = procedure
+            df.at[i, 'ClaimAmount'] = rng.randint(50001, 150000)
+    elif fraud_type == 'bio_mismatch':
+        procedure = get_config().pmjay.female_only_procedures[0]
+        males = df_ben.loc[df_ben['Gender'] == 'M', 'BeneficiaryID'].tolist()
+        for i in picks:
+            df.at[i, 'BeneficiaryID'] = rng.choice(males)
+            df.at[i, 'ProcedureName'] = procedure
+
+
+def apply_min_events_floor(df_ben, df_mgn, df_pmjay, min_events):
+    """Raise every thin fraud type to ``min_events`` within the prevalence cap.
+
+    Rows are *mutated* in place (never added), so the scannable-record count -
+    and therefore the cap - is unchanged. A type is left alone if it has too few
+    clean rows or if the raise would push total fraud above
+    ``1.5 x prevalence x scannable``. Returns ``(frames..., report)``.
+    """
+    rng = make_rng(get_config().seed + 300)
+    report: dict[str, str] = {}
+    total_fraud = len(INJECTIONS)
+
+    def cap() -> float:
+        scannable = len(df_ben) + len(df_mgn) + len(df_pmjay)
+        return 1.5 * SIM.prevalence * scannable
+
+    thin = sorted(
+        (t for t in _TYPE_RULE if INJECTION_COUNTS[t] < min_events),
+        key=lambda t: (INJECTION_COUNTS[t], t),
+    )
+    for fraud_type in thin:
+        count = INJECTION_COUNTS[fraud_type]
+        domain, rule_id = _TYPE_RULE[fraud_type]
+        add = min_events - count
+        if domain == 'civil':
+            if fraud_type == 'mobile_sharing':
+                add = math.ceil(add / _SHARING_GROUP_SIZE) * _SHARING_GROUP_SIZE
+            pool, mutate, args = (
+                _clean_indices(df_ben, 'BeneficiaryID'), _mutate_civil, (df_ben,)
+            )
+        elif domain == 'mgnrega':
+            pool, mutate, args = (
+                _clean_indices(df_mgn, 'TransactionID'), _mutate_mgnrega, (df_mgn,)
+            )
+        else:
+            pool, mutate, args = (
+                _clean_indices(df_pmjay, 'ClaimID'), _mutate_pmjay, (df_pmjay, df_ben)
+            )
+
+        if len(pool) < add:
+            report[fraud_type] = (
+                f"NOT raised ({count}): only {len(pool)} clean {domain} rows"
+            )
+            continue
+        if total_fraud + add > cap():
+            report[fraud_type] = (
+                f"NOT raised ({count}): would push total fraud to {total_fraud + add}"
+                f" > 1.5x prevalence cap ({cap():.0f})"
+            )
+            continue
+
+        picks = rng.sample(pool, add)
+        mutate(*args, fraud_type, picks, rng)
+        for i in picks:
+            if domain == 'civil':
+                record_id = df_ben.at[i, 'BeneficiaryID']
+            elif domain == 'mgnrega':
+                record_id = df_mgn.at[i, 'TransactionID']
+            else:
+                record_id = df_pmjay.at[i, 'ClaimID']
+            _mark_fraud(record_id, fraud_type, rule_id)
+        total_fraud += add
+        report[fraud_type] = f"raised {count} -> {count + add}"
+
+    return df_ben, df_mgn, df_pmjay, report
+
+
+def print_injection_table(min_events: int) -> None:
     """Print the actual injected record counts per fraud_type."""
-    print("\n" + "=" * 70)
-    print("📊 INJECTED RECORD COUNTS PER FRAUD TYPE")
-    print("-" * 70)
-    for fraud_type in sorted(INJECTION_COUNTS):
-        print(f"   {fraud_type:34s} {INJECTION_COUNTS[fraud_type]}")
-    print("-" * 70)
-    print(f"   {'TOTAL injected records':34s} {sum(INJECTION_COUNTS.values())}")
+    print("\n" + "=" * 78)
+    print("in-sample injection counts, not generalization")
+    print("-" * 78)
+    print(f"   {'fraud_type':34s} {'events':>7s}   status")
+    all_types = sorted(
+        set(INJECTION_COUNTS) | set(_TYPE_RULE) | set(_STRUCTURAL_TYPES)
+        | {'hard_negative_blank_mobile'}
+    )
+    for fraud_type in all_types:
+        n = INJECTION_COUNTS[fraud_type]
+        if fraud_type == 'hard_negative_blank_mobile':
+            status = "hard negative (not fraud)"
+        elif n >= min_events:
+            status = "ok"
+        else:
+            status = "not evaluable (< min_events_per_type)"
+        print(f"   {fraud_type:34s} {n:7d}   {status}")
+    print("-" * 78)
+    print(f"   {'TOTAL injected records':34s} {sum(INJECTION_COUNTS.values()):7d}")
+
+
+def print_floor_report(report: dict[str, str]) -> None:
+    """Print the outcome of the min-events-per-type floor."""
+    print("\n" + "-" * 78)
+    print("MIN EVENTS PER TYPE FLOOR (cap = 1.5 x prevalence x scannable)")
+    print("-" * 78)
+    if not report:
+        print("   no thin fraud types; floor not needed")
+        return
+    for fraud_type in sorted(report):
+        print(f"   {fraud_type:34s} {report[fraud_type]}")
 
 
 # =============================================================================
@@ -632,9 +924,20 @@ if __name__ == "__main__":
     df_mgn = generate_mgnrega_transactions(df_ben)
     df_pmjay = generate_pmjay_transactions(df_ben)
 
+    # P2c: raise thin fraud types to the configured floor (within the cap).
+    min_events = get_config().simulator.min_events_per_type
+    df_ben, df_mgn, df_pmjay, floor_report = apply_min_events_floor(
+        df_ben, df_mgn, df_pmjay, min_events
+    )
+    # Persist the post-floor tables so the floor rows reach the scanner.
+    df_ben.to_csv('data/beneficiaries.csv', index=False)
+    df_mgn.to_csv('data/transactions_mgnrega.csv', index=False)
+    df_pmjay.to_csv('data/transactions_pmjay.csv', index=False)
+
     # Ground-truth labels (one row per scannable record) and injection table.
     write_labels(df_ben, df_mgn, df_pmjay)
-    print_injection_table()
+    print_injection_table(min_events)
+    print_floor_report(floor_report)
 
     # Generate ground truth for ML training
     generate_fraud_ground_truth(df_ben, df_mgn, df_pmjay)
