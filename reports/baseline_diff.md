@@ -34,3 +34,18 @@ Untouched rules are expected to be identical, and are noted as such.
   resolved independently and `flagged_domains` is reported sorted.
 - Regression test: `tests/test_rule025_exact_join.py`.
 
+## Fix 3 - Rule 021 (procedure mill): apply PROCEDURE_MILL_THRESHOLD
+
+- Flag-id changes vs `flags_before.json`: **none** (added 0, removed 0).
+- Finding (not a failure): the rule is now wired up correctly, but it stays
+  inert on this synthetic dataset. The largest (hospital, procedure, month)
+  count is 5, well below the threshold of 50. The simulator emits only ~180
+  procedure-mill claims across 3 hospitals and 12 months, so no group reaches
+  50/month. The rule is left in place; lowering the threshold or raising the
+  injected volume is a simulator/eval decision for P2.
+- The fix also removes an input-mutation bug: the old code added an
+  `AdmissionMonth` column to the caller's DataFrame.
+- Regression test: `tests/test_rule021_threshold.py` (a 51-claim group fires,
+  and the input frame is unchanged).
+
+

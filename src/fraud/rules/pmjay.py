@@ -152,5 +152,47 @@ class ProcedureMillRule(Rule):
     severity = 35
 
     def evaluate(self, tables: dict[str, pd.DataFrame], cfg: Any) -> pd.DataFrame:
-        # Original behaviour: no flags emitted (threshold was never applied).
-        return self._results(self.id, [])
+        df = tables["pmjay"]
+        threshold = cfg.pmjay.procedure_mill_threshold
+        if df.empty:
+            return self._results(self.id, [])
+
+        # Build the (hospital, procedure, month) keys in a derived frame so the
+        # input table is never mutated.
+        keys = pd.DataFrame({
+            "HospitalID": df["HospitalID"].astype(str),
+            "ProcedureName": df["ProcedureName"].astype(str),
+            "month": pd.to_datetime(df["AdmissionDate"]).dt.to_period("M").astype(str),
+        })
+        counts = (
+            keys.groupby(["HospitalID", "ProcedureName", "month"])
+            .size()
+            .rename("procedure_count")
+            .reset_index()
+        )
+        merged = keys.merge(
+            counts, on=["HospitalID", "ProcedureName", "month"], how="left"
+        )
+        mask = (merged["procedure_count"] > threshold).to_numpy()
+        matched = df[mask]
+        flagged = merged[mask]
+        rows = [
+            (
+                str(claim_id),
+                {
+                    "hospital_id": hospital,
+                    "procedure": procedure,
+                    "month": month,
+                    "procedure_count": int(count),
+                    "threshold": threshold,
+                },
+            )
+            for claim_id, hospital, procedure, month, count in zip(
+                matched["ClaimID"],
+                flagged["HospitalID"],
+                flagged["ProcedureName"],
+                flagged["month"],
+                flagged["procedure_count"],
+            )
+        ]
+        return self._results(self.id, rows)
