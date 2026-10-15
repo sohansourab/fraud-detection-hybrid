@@ -87,9 +87,16 @@ class MultiSchemeVelocityRule(Rule):
             "claim_to_ben": {},
         }
         if beneficiaries is not None:
+            # Build from the *same* filtered frame: filtering one column with
+            # dropna() and zipping it against the unfiltered other column
+            # pairs rows by position and misaligns everything after the first
+            # NaN (fixed in P1e).
+            sub = beneficiaries[["JobCardID", "BeneficiaryID"]].dropna(
+                subset=["JobCardID"]
+            )
             lookup["job_card_to_ben"] = dict(zip(
-                beneficiaries["JobCardID"].dropna().astype(str),
-                beneficiaries["BeneficiaryID"].astype(str),
+                sub["JobCardID"].astype(str),
+                sub["BeneficiaryID"].astype(str),
             ))
         if mgnrega is not None:
             lookup["txn_to_job_card"] = dict(zip(

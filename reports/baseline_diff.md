@@ -34,6 +34,38 @@ Untouched rules are expected to be identical, and are noted as such.
   resolved independently and `flagged_domains` is reported sorted.
 - Regression test: `tests/test_rule025_exact_join.py`.
 
+## P1e correction - Rule 025 join alignment (supersedes the Fix 2 numbers)
+
+Fix 2 above introduced a regression: the `JobCardID -> BeneficiaryID` map was
+built as
+
+```python
+dict(zip(beneficiaries["JobCardID"].dropna().astype(str),
+         beneficiaries["BeneficiaryID"].astype(str)))
+```
+
+`dropna()` shortens the key column but not the value column, so `zip` paired
+the two columns **by position**: every row after the first null job card got
+the wrong beneficiary. On the synthetic data 1,406 of 1,407 pairs were wrong.
+
+- Fix: build the map from the *same* filtered frame
+  (`beneficiaries[["JobCardID", "BeneficiaryID"]].dropna(subset=["JobCardID"])`).
+- Error figures (all from the synthetic dataset):
+
+  | RULE_025 | count |
+  |---|---|
+  | before (P1a) | 99 |
+  | old, buggy (P1d) | 616 |
+  | corrected (P1e) | **660** |
+
+- The old 616 was **not** a subset of the corrected 660: **304** of the P1d
+  flags were spurious (produced only by the misalignment) and are dropped.
+  Removed-vs-`flags_before.json` is still **0**, so the original 99 P1a flags
+  all remain.
+- Total flags: 2561 (P1d) -> **2605** (P1e); flagged records unchanged.
+- Regression test: `tests/test_rule025_alignment.py` (fails on the P1d code,
+  passes after the fix).
+
 ## Fix 3 - Rule 021 (procedure mill): apply PROCEDURE_MILL_THRESHOLD
 
 - Flag-id changes vs `flags_before.json`: **none** (added 0, removed 0).
@@ -61,14 +93,14 @@ Untouched rules are expected to be identical, and are noted as such.
 
 ## Summary
 
-Only Rule 025 intentionally changed the flag set:
+Only Rule 025 intentionally changed the flag set (P1e corrects the P1d count):
 
 | rule | before | after | added | removed |
 |---|---|---|---|---|
-| RULE_025 | 99 | 616 | 517 | 0 |
+| RULE_025 | 99 | 660 | 561 | 0 |
 | all other rules | (unchanged) | (unchanged) | 0 | 0 |
 
-Totals: flags 2044 -> 2561; flagged records 1776 -> 1776.
+Totals: flags 2044 -> 2605; flagged records 1776 -> 1776.
 
 
 
