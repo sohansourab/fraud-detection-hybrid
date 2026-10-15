@@ -11,6 +11,7 @@ Cross-Domain: Rule 25 (Multi-Scheme Velocity)
 
 import pandas as pd
 import json
+import sys
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
@@ -21,6 +22,15 @@ import logging
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# Make the ``src`` package importable when run as a legacy root-level script.
+_SRC_DIR = Path(__file__).resolve().parent / "src"
+if _SRC_DIR.is_dir() and str(_SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(_SRC_DIR))
+
+from fraud.config import get_config  # noqa: E402
+
+_CONFIG = get_config()
 
 
 # =============================================================================
@@ -64,7 +74,7 @@ class CivilRegistryScanner:
     """
     
     DOMAIN = "Civil Registry"
-    DATA_PATH = "data/beneficiaries.csv"
+    DATA_PATH = _CONFIG.paths.beneficiaries
     
     RULES = {
         "RULE_001": {
@@ -100,11 +110,11 @@ class CivilRegistryScanner:
     }
     
     # Thresholds
-    DUMMY_MOBILE = "9999999999"
-    MIN_ADULT_AGE = 18
-    MAX_NORMAL_AGE = 100
-    MAX_FAMILY_SIZE = 15
-    MAX_MOBILE_SHARING = 3  # Max people sharing same mobile
+    DUMMY_MOBILE = _CONFIG.civil_registry.dummy_mobile
+    MIN_ADULT_AGE = _CONFIG.civil_registry.min_adult_age
+    MAX_NORMAL_AGE = _CONFIG.civil_registry.max_normal_age
+    MAX_FAMILY_SIZE = _CONFIG.civil_registry.max_family_size
+    MAX_MOBILE_SHARING = _CONFIG.civil_registry.max_mobile_sharing  # Max people sharing same mobile
     
     def __init__(self):
         self.df: pd.DataFrame = None
@@ -238,7 +248,7 @@ class MGNREGAScanner:
     """
     
     DOMAIN = "MGNREGA Labor"
-    DATA_PATH = "data/transactions_mgnrega.csv"
+    DATA_PATH = _CONFIG.paths.mgnrega
     
     RULES = {
         "RULE_005": {
@@ -274,9 +284,10 @@ class MGNREGAScanner:
     }
     
     # Thresholds
-    MAX_DAYS_PER_CYCLE = 15
-    GHOST_PROJECT_SUFFIX = "_000"
-    CARTEL_THRESHOLD = 0.80  # 80% co-occurrence rate
+    MAX_DAYS_PER_CYCLE = _CONFIG.mgnrega.max_days_per_cycle
+    GHOST_PROJECT_SUFFIX = _CONFIG.mgnrega.ghost_project_suffix
+    CARTEL_THRESHOLD = _CONFIG.mgnrega.cartel_threshold  # co-occurrence rate
+    MIN_CARTEL_APPEARANCES = _CONFIG.mgnrega.min_cartel_appearances  # mature rolls before cartel check
     
     def __init__(self):
         self.df: pd.DataFrame = None
@@ -377,7 +388,7 @@ class MGNREGAScanner:
             if job_card_id in job_card_cooccurrence:
                 # Find workers this job card frequently appears with
                 total_appearances = sum(1 for workers in self.muster_roll_workers.values() if job_card_id in workers)
-                if total_appearances > 3:  # Only check if appeared in >3 rolls
+                if total_appearances > self.MIN_CARTEL_APPEARANCES:  # Only check mature rolls
                     for other_card, cooccur_count in job_card_cooccurrence[job_card_id].items():
                         cooccurrence_rate = cooccur_count / total_appearances
                         if cooccurrence_rate >= self.CARTEL_THRESHOLD:
@@ -425,8 +436,8 @@ class PMJAYScanner:
     """
     
     DOMAIN = "PM-JAY Medical"
-    DATA_PATH = "data/transactions_pmjay.csv"
-    BENEFICIARIES_PATH = "data/beneficiaries.csv"
+    DATA_PATH = _CONFIG.paths.pmjay
+    BENEFICIARIES_PATH = _CONFIG.paths.beneficiaries
     
     RULES = {
         "RULE_009": {
@@ -462,11 +473,11 @@ class PMJAYScanner:
     }
     
     # Thresholds
-    MAX_GENERAL_WARD_COST = 50000
-    BLACKLISTED_HOSPITAL = "HOSP_999"
-    FEMALE_ONLY_PROCEDURES = ["Hysterectomy"]
-    GENERAL_PROCEDURES = ["General Ward", "General Consultation"]
-    PROCEDURE_MILL_THRESHOLD = 50  # Procedures per month
+    MAX_GENERAL_WARD_COST = _CONFIG.pmjay.max_general_ward_cost
+    BLACKLISTED_HOSPITAL = _CONFIG.pmjay.blacklisted_hospital
+    FEMALE_ONLY_PROCEDURES = _CONFIG.pmjay.female_only_procedures
+    GENERAL_PROCEDURES = _CONFIG.pmjay.general_procedures
+    PROCEDURE_MILL_THRESHOLD = _CONFIG.pmjay.procedure_mill_threshold  # Procedures per month
     
     def __init__(self):
         self.df: pd.DataFrame = None
@@ -608,7 +619,7 @@ class MasterFraudScanner:
     Total: 12 deterministic rules
     """
     
-    OUTPUT_PATH = "output/reports/fraud_report.json"
+    OUTPUT_PATH = _CONFIG.paths.output
     
     def __init__(self):
         self.civil_scanner = CivilRegistryScanner()
@@ -682,7 +693,7 @@ class MasterFraudScanner:
                 if "Beneficiary:" in report.record_name:
                     ben_id = report.record_name.split("|")[0].replace("Beneficiary:", "").strip()
             
-            if ben_id and ben_id.startswith("BEN_"):
+            if ben_id and ben_id.startswith(_CONFIG.cross_domain.beneficiary_prefix):
                 if ben_id not in beneficiary_domains:
                     beneficiary_domains[ben_id] = set()
                 beneficiary_domains[ben_id].add(report.domain)
@@ -697,7 +708,7 @@ class MasterFraudScanner:
         }
         
         for ben_id, domains in beneficiary_domains.items():
-            if len(domains) >= 2:  # Flagged in 2+ domains
+            if len(domains) >= _CONFIG.cross_domain.min_domains:  # Flagged in multiple domains
                 # Add cross-domain flag to existing reports for this beneficiary
                 for report in self.all_reports:
                     if ben_id in report.record_id or ben_id in report.record_name:
@@ -728,11 +739,11 @@ class MasterFraudScanner:
         # Risk distribution
         risk_distribution = {"low": 0, "medium": 0, "high": 0, "critical": 0}
         for report in self.all_reports:
-            if report.total_risk_score <= 25:
+            if report.total_risk_score <= _CONFIG.risk_bands.low_max:
                 risk_distribution["low"] += 1
-            elif report.total_risk_score <= 50:
+            elif report.total_risk_score <= _CONFIG.risk_bands.medium_max:
                 risk_distribution["medium"] += 1
-            elif report.total_risk_score <= 75:
+            elif report.total_risk_score <= _CONFIG.risk_bands.high_max:
                 risk_distribution["high"] += 1
             else:
                 risk_distribution["critical"] += 1

@@ -13,3 +13,6 @@ output/
 *.csv
 *.pdf
 *.json
+
+# Keep the committed regression snapshot under tests/
+!tests/baseline/*.json

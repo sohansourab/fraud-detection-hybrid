@@ -1,0 +1,41 @@
+# Central configuration for the hybrid fraud detection pipeline.
+# Every threshold, file path and seed used by the scanner lives here.
+seed: 42
+
+paths:
+  beneficiaries: data/beneficiaries.csv
+  mgnrega: data/transactions_mgnrega.csv
+  pmjay: data/transactions_pmjay.csv
+  output: output/reports/fraud_report.json
+
+civil_registry:
+  dummy_mobile: "9999999999"
+  min_adult_age: 18
+  max_normal_age: 100
+  max_family_size: 15
+  max_mobile_sharing: 3
+
+mgnrega:
+  max_days_per_cycle: 15
+  ghost_project_suffix: "_000"
+  cartel_threshold: 0.80
+  min_cartel_appearances: 3
+
+pmjay:
+  max_general_ward_cost: 50000
+  blacklisted_hospital: "HOSP_999"
+  female_only_procedures:
+    - Hysterectomy
+  general_procedures:
+    - General Ward
+    - General Consultation
+  procedure_mill_threshold: 50
+
+cross_domain:
+  min_domains: 2
+  beneficiary_prefix: "BEN_"
+
+risk_bands:
+  low_max: 25
+  medium_max: 50
+  high_max: 75
