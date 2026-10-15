@@ -1,7 +1,7 @@
 """Domain 3 rules: PM-JAY (medical fraud).
 
-Logic is copied verbatim from the original ``audit_scanner.py`` scanners;
-optimizations/bug fixes are intentionally deferred to later steps.
+Selection is vectorized with boolean masks / map; only rows that actually
+match are iterated to build their evidence dicts.
 """
 from __future__ import annotations
 
@@ -26,19 +26,26 @@ class TimeTravelRule(Rule):
 
     def evaluate(self, tables: dict[str, pd.DataFrame], cfg: Any) -> pd.DataFrame:
         df = tables["pmjay"]
-        rows: list[tuple[str, dict[str, Any]]] = []
-        for _, row in df.iterrows():
-            admission_date = row["AdmissionDate"]
-            discharge_date = row["DischargeDate"]
-            if pd.notna(admission_date) and pd.notna(discharge_date):
-                if discharge_date < admission_date:
-                    rows.append((
-                        str(row["ClaimID"]),
-                        {
-                            "admission_date": str(admission_date.date()),
-                            "discharge_date": str(discharge_date.date()),
-                        },
-                    ))
+        admission = df["AdmissionDate"]
+        discharge = df["DischargeDate"]
+        mask = (
+            admission.notna()
+            & discharge.notna()
+            & (discharge < admission).fillna(False)
+        ).fillna(False).astype(bool)
+        matched = df[mask]
+        rows = [
+            (
+                str(claim_id),
+                {
+                    "admission_date": str(adm.date()),
+                    "discharge_date": str(dis.date()),
+                },
+            )
+            for claim_id, adm, dis in zip(
+                matched["ClaimID"], matched["AdmissionDate"], matched["DischargeDate"]
+            )
+        ]
         return self._results(self.id, rows)
 
 
@@ -58,16 +65,14 @@ class BiologicalMismatchRule(Rule):
         beneficiaries = tables["beneficiaries"]
         female_only = cfg.pmjay.female_only_procedures
         gender_map = dict(zip(beneficiaries["BeneficiaryID"], beneficiaries["Gender"]))
-        rows: list[tuple[str, dict[str, Any]]] = []
-        for _, row in df.iterrows():
-            ben_id = str(row["BeneficiaryID"])
-            procedure = str(row["ProcedureName"])
-            gender = gender_map.get(ben_id, "Unknown")
-            if gender == "M" and procedure in female_only:
-                rows.append((
-                    str(row["ClaimID"]),
-                    {"gender": "Male", "procedure": procedure},
-                ))
+        procedure = df["ProcedureName"].astype(str)
+        gender = df["BeneficiaryID"].astype(str).map(gender_map)
+        mask = ((gender == "M") & procedure.isin(female_only)).astype(bool)
+        matched = df[mask]
+        rows = [
+            (str(claim_id), {"gender": "Male", "procedure": str(proc)})
+            for claim_id, proc in zip(matched["ClaimID"], procedure[mask])
+        ]
         return self._results(self.id, rows)
 
 
@@ -86,19 +91,23 @@ class MassiveUpcodingRule(Rule):
         df = tables["pmjay"]
         general_procedures = cfg.pmjay.general_procedures
         max_cost = cfg.pmjay.max_general_ward_cost
-        rows: list[tuple[str, dict[str, Any]]] = []
-        for _, row in df.iterrows():
-            procedure = str(row["ProcedureName"])
-            claim_amount = row["ClaimAmount"] if pd.notna(row["ClaimAmount"]) else 0
-            if procedure in general_procedures and claim_amount > max_cost:
-                rows.append((
-                    str(row["ClaimID"]),
-                    {
-                        "procedure": procedure,
-                        "claim_amount": int(claim_amount),
-                        "threshold": max_cost,
-                    },
-                ))
+        procedure = df["ProcedureName"].astype(str)
+        claim_amount = df["ClaimAmount"].fillna(0)
+        mask = (procedure.isin(general_procedures) & (claim_amount > max_cost)).astype(bool)
+        matched = df[mask]
+        rows = [
+            (
+                str(claim_id),
+                {
+                    "procedure": str(proc),
+                    "claim_amount": int(amount),
+                    "threshold": max_cost,
+                },
+            )
+            for claim_id, proc, amount in zip(
+                matched["ClaimID"], procedure[mask], claim_amount[mask]
+            )
+        ]
         return self._results(self.id, rows)
 
 
@@ -116,11 +125,13 @@ class BlacklistedHospitalRule(Rule):
     def evaluate(self, tables: dict[str, pd.DataFrame], cfg: Any) -> pd.DataFrame:
         df = tables["pmjay"]
         blacklisted = cfg.pmjay.blacklisted_hospital
-        rows: list[tuple[str, dict[str, Any]]] = []
-        for _, row in df.iterrows():
-            hospital_id = str(row["HospitalID"])
-            if hospital_id == blacklisted:
-                rows.append((str(row["ClaimID"]), {"hospital_id": hospital_id}))
+        hospital_id = df["HospitalID"].astype(str)
+        mask = (hospital_id == blacklisted).astype(bool)
+        matched = df[mask]
+        rows = [
+            (str(claim_id), {"hospital_id": str(hospital)})
+            for claim_id, hospital in zip(matched["ClaimID"], hospital_id[mask])
+        ]
         return self._results(self.id, rows)
 
 

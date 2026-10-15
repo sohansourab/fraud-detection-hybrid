@@ -1,11 +1,10 @@
 """Domain 1 rules: Civil Registry (identity fraud).
 
-Logic is copied verbatim from the original ``audit_scanner.py`` scanners;
-optimizations/bug fixes are intentionally deferred to later steps.
+Selection is vectorized with boolean masks; only rows that actually match are
+iterated to build their evidence dicts.
 """
 from __future__ import annotations
 
-from collections import Counter
 from typing import Any
 
 import pandas as pd
@@ -28,11 +27,11 @@ class InvalidMobileRule(Rule):
     def evaluate(self, tables: dict[str, pd.DataFrame], cfg: Any) -> pd.DataFrame:
         df = tables["beneficiaries"]
         dummy_mobile = cfg.civil_registry.dummy_mobile
-        rows: list[tuple[str, dict[str, Any]]] = []
-        for _, row in df.iterrows():
-            mobile = str(row["MobileNumber"])
-            if mobile == dummy_mobile:
-                rows.append((str(row["BeneficiaryID"]), {"mobile_number": mobile}))
+        matched = df[df["MobileNumber"] == dummy_mobile]
+        rows = [
+            (str(ben_id), {"mobile_number": str(mobile)})
+            for ben_id, mobile in zip(matched["BeneficiaryID"], matched["MobileNumber"])
+        ]
         return self._results(self.id, rows)
 
 
@@ -50,16 +49,21 @@ class UnderageWithJobCardRule(Rule):
     def evaluate(self, tables: dict[str, pd.DataFrame], cfg: Any) -> pd.DataFrame:
         df = tables["beneficiaries"]
         min_adult_age = cfg.civil_registry.min_adult_age
-        rows: list[tuple[str, dict[str, Any]]] = []
-        for _, row in df.iterrows():
-            age = row["Age"]
-            job_card_id = row["JobCardID"]
-            if pd.notna(age) and age < min_adult_age:
-                if pd.notna(job_card_id) and str(job_card_id).strip():
-                    rows.append((
-                        str(row["BeneficiaryID"]),
-                        {"age": int(age), "job_card_id": str(job_card_id)},
-                    ))
+        age = df["Age"]
+        job_card = df["JobCardID"]
+        mask = (
+            age.notna()
+            & (age < min_adult_age).fillna(False)
+            & job_card.notna()
+            & (job_card.astype(str).str.strip() != "")
+        ).fillna(False).astype(bool)
+        matched = df[mask]
+        rows = [
+            (str(ben_id), {"age": int(row_age), "job_card_id": str(job_card_id)})
+            for ben_id, row_age, job_card_id in zip(
+                matched["BeneficiaryID"], matched["Age"], matched["JobCardID"]
+            )
+        ]
         return self._results(self.id, rows)
 
 
@@ -77,11 +81,13 @@ class SuspiciousAgeRule(Rule):
     def evaluate(self, tables: dict[str, pd.DataFrame], cfg: Any) -> pd.DataFrame:
         df = tables["beneficiaries"]
         max_normal_age = cfg.civil_registry.max_normal_age
-        rows: list[tuple[str, dict[str, Any]]] = []
-        for _, row in df.iterrows():
-            age = row["Age"]
-            if pd.notna(age) and age > max_normal_age:
-                rows.append((str(row["BeneficiaryID"]), {"age": int(age)}))
+        age = df["Age"]
+        mask = (age.notna() & (age > max_normal_age).fillna(False)).fillna(False).astype(bool)
+        matched = df[mask]
+        rows = [
+            (str(ben_id), {"age": int(row_age)})
+            for ben_id, row_age in zip(matched["BeneficiaryID"], matched["Age"])
+        ]
         return self._results(self.id, rows)
 
 
@@ -99,17 +105,19 @@ class MegaFamilyRule(Rule):
     def evaluate(self, tables: dict[str, pd.DataFrame], cfg: Any) -> pd.DataFrame:
         df = tables["beneficiaries"]
         max_family_size = cfg.civil_registry.max_family_size
-        family_counts = Counter(df["FamilyID"].dropna().astype(str))
-        rows: list[tuple[str, dict[str, Any]]] = []
-        for _, row in df.iterrows():
-            family_id = row["FamilyID"]
-            if pd.notna(family_id):
-                family_size = family_counts.get(str(family_id), 0)
-                if family_size > max_family_size:
-                    rows.append((
-                        str(row["BeneficiaryID"]),
-                        {"family_id": str(family_id), "family_size": family_size},
-                    ))
+        family = df["FamilyID"]
+        family_sizes = family.dropna().astype(str).value_counts()
+        size_per_row = family.astype(str).map(family_sizes).fillna(0)
+        mask = (
+            family.notna() & (size_per_row > max_family_size)
+        ).fillna(False).astype(bool)
+        matched = df[mask]
+        rows = [
+            (str(ben_id), {"family_id": str(family_id), "family_size": int(size)})
+            for ben_id, family_id, size in zip(
+                matched["BeneficiaryID"], matched["FamilyID"], size_per_row[mask]
+            )
+        ]
         return self._results(self.id, rows)
 
 
@@ -128,16 +136,15 @@ class CloneDetectionRule(Rule):
         df = tables["beneficiaries"]
         dummy_mobile = cfg.civil_registry.dummy_mobile
         max_mobile_sharing = cfg.civil_registry.max_mobile_sharing
-        valid_mobiles = df[df["MobileNumber"] != dummy_mobile]["MobileNumber"].dropna().astype(str)
-        mobile_counts = Counter(valid_mobiles)
-        rows: list[tuple[str, dict[str, Any]]] = []
-        for _, row in df.iterrows():
-            mobile = str(row["MobileNumber"])
-            if mobile != dummy_mobile:
-                mobile_share_count = mobile_counts.get(mobile, 0)
-                if mobile_share_count > max_mobile_sharing:
-                    rows.append((
-                        str(row["BeneficiaryID"]),
-                        {"mobile_number": mobile, "shared_by": mobile_share_count},
-                    ))
+        mobile = df["MobileNumber"].astype(str)
+        share_counts = mobile[mobile != dummy_mobile].dropna().value_counts()
+        shared_by = mobile.map(share_counts).fillna(0)
+        mask = ((mobile != dummy_mobile) & (shared_by > max_mobile_sharing)).astype(bool)
+        matched = df[mask]
+        rows = [
+            (str(ben_id), {"mobile_number": str(row_mobile), "shared_by": int(count)})
+            for ben_id, row_mobile, count in zip(
+                matched["BeneficiaryID"], mobile[mask], shared_by[mask]
+            )
+        ]
         return self._results(self.id, rows)

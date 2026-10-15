@@ -45,7 +45,11 @@ class Rule(ABC):
     def _results(
         rule_id: str, rows: list[tuple[str, dict[str, Any]]]
     ) -> pd.DataFrame:
-        """Build a result frame from ``(record_id, evidence)`` pairs."""
+        """Build a result frame from ``(record_id, evidence)`` pairs.
+
+        Rows are sorted by ``record_id`` so per-rule output is deterministic.
+        """
+        rows = sorted(rows, key=lambda item: item[0])
         return pd.DataFrame(
             {
                 "record_id": [record_id for record_id, _ in rows],
