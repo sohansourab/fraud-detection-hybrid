@@ -91,9 +91,32 @@ the wrong beneficiary. On the synthetic data 1,406 of 1,407 pairs were wrong.
   the config seed (42) instead of `uuid.uuid4()`.
 - Regression test: `tests/test_simulate_determinism.py`.
 
+## P2a - simulator injections + labels contract
+
+- Data regenerated with cartel (Rule 017), procedure-mill (Rule 021) and
+  blank-mobile hard-negative (Rule 013) injections, plus `data/labels.csv`
+  (one row per scannable record). No rule logic changed.
+- RULE_025 count: before 660 (P1e) -> after **890**.
+- Total flags: 2605 -> 3339; flagged records 1776 -> 2270.
+- `flags_after_p1d.json` was refreshed mechanically here. Because `data/` is
+  gitignored, the snapshot now embeds an MD5 of each input table and
+  `tests/test_baseline.py` fails with a "regenerate deliberately" message when
+  the generated data changes.
+
+## P2b - prevalence scaling
+
+- Added `simulator.prevalence` (default 0.02). The simulator now scales every
+  injected volume so the realised fraud rate is ~2% instead of ~24%.
+- Structural floors keep Rules 004/013/017/021 able to fire: at least one
+  cartel group, a mill group of >= `procedure_mill_threshold + 1`, one clone
+  group, and a mega family larger than `max_family_size`.
+- RULE_025 count: before 890 (P2a) -> after **16**.
+- Total flags: 3339 -> **271**; flagged records 2270 -> **249**.
+- Realised prevalence: 244 fraud records / 10087 scannable = **2.42%**.
+
 ## Summary
 
-Only Rule 025 intentionally changed the flag set (P1e corrects the P1d count):
+P1d/P1e changed only Rule 025:
 
 | rule | before | after | added | removed |
 |---|---|---|---|---|
@@ -101,6 +124,11 @@ Only Rule 025 intentionally changed the flag set (P1e corrects the P1d count):
 | all other rules | (unchanged) | (unchanged) | 0 | 0 |
 
 Totals: flags 2044 -> 2605; flagged records 1776 -> 1776.
+
+Later modules changed the *generated data*, not rule logic: P2a (injections +
+labels) -> RULE_025 890 / total flags 3339; P2b (prevalence 0.02) -> RULE_025
+16 / total flags 271. The current committed snapshot is
+`tests/baseline/flags_after_p1d.json`; see the P2a and P2b sections above.
 
 
 

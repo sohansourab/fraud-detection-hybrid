@@ -10,6 +10,7 @@ Default output: ``tests/baseline/flags_after_p1d.json``.
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import io
 import json
 import logging
@@ -24,7 +25,24 @@ for _path in (REPO_ROOT / "src", REPO_ROOT):
 logging.disable(logging.CRITICAL)
 
 import audit_scanner  # noqa: E402
+from fraud.config import get_config  # noqa: E402
 from fraud.rules import get_rules  # noqa: E402
+
+INPUT_TABLES = ("beneficiaries", "mgnrega", "pmjay")
+
+
+def input_md5s() -> dict[str, str]:
+    """MD5 of each scanner input table, keyed by config path name."""
+    cfg = get_config()
+    hashes: dict[str, str] = {}
+    for name in INPUT_TABLES:
+        path = Path(getattr(cfg.paths, name))
+        if not path.is_absolute():
+            path = REPO_ROOT / path
+        hashes[name] = (
+            hashlib.md5(path.read_bytes()).hexdigest() if path.is_file() else "missing"
+        )
+    return hashes
 
 
 def snapshot() -> dict:
@@ -45,6 +63,7 @@ def snapshot() -> dict:
     out = {
         "_total_flag_count": total_flags,
         "_total_flagged_records": len(scanner.all_reports),
+        "_input_md5": input_md5s(),
     }
     for rule_id in sorted(rules):
         out[rule_id] = sorted(rules[rule_id])

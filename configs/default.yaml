@@ -40,9 +40,14 @@ risk_bands:
   medium_max: 50
   high_max: 75
 
-# Synthetic data simulator injections (module P2a).
+# Synthetic data simulator injections (module P2a; prevalence scaling in P2b).
 # These let the currently-inert rules fire and add Rule 013 hard negatives.
 simulator:
+  # Target fraction of *fraud* records (is_fraud=1) among all scannable
+  # records. The simulator scales the per-rule injection volumes so the
+  # realised rate lands near this value instead of the much higher hard-coded
+  # per-rule rates.
+  prevalence: 0.02
   # Rule 017 (cartel): N groups of workers who co-occur in every muster roll.
   cartel_groups: 15
   cartel_group_min_size: 4
@@ -51,8 +56,10 @@ simulator:
   # mgnrega.min_cartel_appearances = 3 so the rule's appearances gate passes).
   cartel_muster_rolls: 6
   # Rule 021 (procedure mill): groups of same (hospital, procedure, month).
-  # One group of 60 clears pmjay.procedure_mill_threshold = 50.
+  # Volumes are scaled by prevalence but floored so one group still clears
+  # pmjay.procedure_mill_threshold = 50.
   procedure_mill_groups: 1
   procedure_mill_group_size: 60
   # Rule 013 hard negatives: fraction of beneficiaries with null/blank mobile.
+  # Hard negatives are not fraud, so this is not scaled by prevalence.
   blank_mobile_rate: 0.02

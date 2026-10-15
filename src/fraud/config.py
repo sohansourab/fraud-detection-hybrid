@@ -104,6 +104,8 @@ class SimulatorConfig:
     procedure_mill_groups: int = 1
     procedure_mill_group_size: int = 60
     blank_mobile_rate: float = 0.02
+    # Target fraction of fraud (is_fraud=1) records among scannable records.
+    prevalence: float = 0.02
 
 
 @dataclass(frozen=True)

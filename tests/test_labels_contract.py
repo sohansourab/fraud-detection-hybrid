@@ -24,6 +24,12 @@ import pandas as pd
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+for _path in (REPO_ROOT / "src", REPO_ROOT):
+    if str(_path) not in sys.path:
+        sys.path.insert(0, str(_path))
+
+from fraud.config import get_config  # noqa: E402
+
 SIMULATOR = REPO_ROOT / "data_simulator.py"
 
 DATA_FILES = [
@@ -116,11 +122,15 @@ def test_labels_one_row_per_scannable_record_and_injections() -> None:
     assert len(labels) == len(ben) + len(mgn) + len(pmj)
     assert labels["record_id"].is_unique
 
+    cfg = get_config()
     counts = labels["fraud_type"].value_counts().to_dict()
-    # P2a injections that make the previously-inert rules fire.
-    assert counts.get("procedure_mill", 0) == 60
+    # P2a injections that make the previously-inert rules fire; volumes are
+    # scaled by prevalence (P2b) but floored so these still fire.
+    assert counts.get("procedure_mill", 0) >= cfg.pmjay.procedure_mill_threshold + 1
     assert counts.get("muster_cartel", 0) > 0
-    assert counts.get("hard_negative_blank_mobile", 0) == 40
+    assert counts.get("hard_negative_blank_mobile", 0) == int(
+        len(ben) * cfg.simulator.blank_mobile_rate
+    )
 
     # Blank-mobile rows are hard negatives, never fraud.
     blanks = labels[labels["fraud_type"] == "hard_negative_blank_mobile"]

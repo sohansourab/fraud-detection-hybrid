@@ -78,8 +78,10 @@ NUM_BENEFICIARIES = 2000
 NUM_MGNREGA_TXNS = 5000
 NUM_PMJAY_TXNS = 3000
 
-# Fraud Contamination Rates (% of records that will be fraudulent per rule)
-FRAUD_RATES = {
+# Fraud Contamination Rates (% of records that will be fraudulent per rule).
+# These are *relative weights*: the simulator rescales them below so the
+# realised fraud rate matches ``simulator.prevalence``.
+_RAW_FRAUD_RATES = {
     # Domain 1: Civil Registry
     'RULE_001_INVALID_MOBILE': 0.05,      # 5% dummy mobiles
     'RULE_002_UNDERAGE_JOBCARD': 0.03,    # 3% minors with job cards
@@ -105,13 +107,56 @@ FRAUD_RATES = {
     'RULE_025_MULTI_SCHEME': 0.02         # 2% beneficiaries in multiple domains
 }
 
+# --- Prevalence scaling (module P2b) ---------------------------------------
+# The raw rates above add up to a far higher fraud rate than a realistic
+# welfare dataset. Scale every injected volume so the realised fraud rate
+# (is_fraud=1 records / scannable records) lands near simulator.prevalence.
+# Group-structured injections keep a floor so Rules 004/013/017/021 can still
+# fire (a cartel needs several co-occurring rolls; a mill needs >50 claims).
+SIM = get_config().simulator
+_CIVIL_KEYS = (
+    'RULE_001_INVALID_MOBILE', 'RULE_002_UNDERAGE_JOBCARD',
+    'RULE_003_SUSPICIOUS_AGE', 'RULE_004_MEGA_FAMILY',
+    'RULE_013_CLONE_DETECTION',
+)
+_MGNREGA_KEYS = (
+    'RULE_005_IMPOSSIBLE_HUMAN', 'RULE_006_GHOST_PROJECT',
+    'RULE_007_WAGE_THEFT', 'RULE_008_FREE_MONEY',
+)
+_PMJAY_KEYS = (
+    'RULE_009_TIME_TRAVEL', 'RULE_010_BIO_MISMATCH',
+    'RULE_011_MASSIVE_UPCODING', 'RULE_012_BLACKLISTED_HOSPITAL',
+)
+_AVG_CARTEL_SIZE = (SIM.cartel_group_min_size + SIM.cartel_group_max_size) / 2
+_SCANNABLE = NUM_BENEFICIARIES + NUM_MGNREGA_TXNS + NUM_PMJAY_TXNS
+_TARGET_FRAUD = SIM.prevalence * _SCANNABLE
+_EXPECTED_FRAUD = (
+    NUM_BENEFICIARIES * sum(_RAW_FRAUD_RATES[k] for k in _CIVIL_KEYS)
+    + NUM_MGNREGA_TXNS * sum(_RAW_FRAUD_RATES[k] for k in _MGNREGA_KEYS)
+    + NUM_PMJAY_TXNS * sum(_RAW_FRAUD_RATES[k] for k in _PMJAY_KEYS)
+    + SIM.cartel_groups * _AVG_CARTEL_SIZE * SIM.cartel_muster_rolls
+    + SIM.procedure_mill_groups * SIM.procedure_mill_group_size
+)
+_SCALE = _TARGET_FRAUD / _EXPECTED_FRAUD
+
+# Effective (scaled) per-rule rates consumed by the generators below.
+FRAUD_RATES = {key: rate * _SCALE for key, rate in _RAW_FRAUD_RATES.items()}
+# Structural floors so the group rules can still fire on the scaled budget.
+CARTEL_GROUPS = max(1, round(SIM.cartel_groups * _SCALE))
+MILL_GROUPS = max(1, round(SIM.procedure_mill_groups * _SCALE))
+MILL_GROUP_SIZE = max(
+    get_config().pmjay.procedure_mill_threshold + 1,
+    round(SIM.procedure_mill_group_size * _SCALE),
+)
+
 # Create output directories
 Path("data").mkdir(exist_ok=True)
 Path("output/reports").mkdir(parents=True, exist_ok=True)
 
 print("🚀 Starting Synthetic Data Generation with Fraud Contamination...")
 print(f"   Total Fraud Injection Points: {len(FRAUD_RATES)} rules")
-print(f"   Average Contamination Rate: {sum(FRAUD_RATES.values()) / len(FRAUD_RATES) * 100:.1f}%\n")
+print(f"   Target prevalence: {SIM.prevalence:.0%} (scale factor {_SCALE:.4f})")
+print(f"   Structural floors: cartel_groups={CARTEL_GROUPS}, mill={MILL_GROUPS}x{MILL_GROUP_SIZE}\n")
 
 
 # =============================================================================
@@ -134,10 +179,16 @@ def generate_beneficiaries():
     
     # Pre-select mega family
     mega_family_id = family_ids[0]
-    mega_family_size = int(NUM_BENEFICIARIES * FRAUD_RATES['RULE_004_MEGA_FAMILY'])
+    mega_family_size = max(
+        int(NUM_BENEFICIARIES * FRAUD_RATES['RULE_004_MEGA_FAMILY']),
+        get_config().civil_registry.max_family_size + 1,  # keep Rule 004 able to fire
+    )
     
     # RULE_013: Clone Detection - Create mobile sharing groups
-    num_clone_groups = int(NUM_BENEFICIARIES * FRAUD_RATES['RULE_013_CLONE_DETECTION'] / 5)  # Groups of ~5
+    num_clone_groups = max(
+        1,  # keep Rule 013 able to fire on the scaled budget
+        int(NUM_BENEFICIARIES * FRAUD_RATES['RULE_013_CLONE_DETECTION'] / 5),
+    )  # Groups of ~5
     clone_mobiles = [f"99{random.randint(10000000, 99999999)}" for _ in range(num_clone_groups)]
     clone_assignments = []  # Track who gets clone mobiles
     
@@ -230,7 +281,7 @@ def _build_cartel_groups(valid_job_cards, sim):
     Deterministic: draws group sizes and the shuffled pool from the global
     seeded RNG, so a fixed seed always yields the same groups.
     """
-    num_groups = max(0, sim.cartel_groups)
+    num_groups = max(0, CARTEL_GROUPS)
     sizes = [
         random.randint(sim.cartel_group_min_size, sim.cartel_group_max_size)
         for _ in range(num_groups)
@@ -443,12 +494,11 @@ def generate_pmjay_transactions(df_beneficiaries):
     # RULE_021: dedicated procedure-mill injection. Configurable; the default is
     # one (hospital, procedure, month) group of 60 claims, above
     # pmjay.procedure_mill_threshold (50). A fixed month keeps the group stable.
-    sim = get_config().simulator
     mill_procedure = procedures['surgery'][0]
     mill_admission = '2024-06-15'
-    for g in range(sim.procedure_mill_groups):
+    for g in range(MILL_GROUPS):
         hospital_id = f"HOSP_MILL_{g:02d}"
-        for k in range(sim.procedure_mill_group_size):
+        for k in range(MILL_GROUP_SIZE):
             claim_id = f"CLM_MILL_{g:02d}_{k:03d}"
             claims.append({
                 'ClaimID': claim_id,
