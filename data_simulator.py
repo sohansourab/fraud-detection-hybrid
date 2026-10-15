@@ -17,6 +17,7 @@ import sys
 from faker import Faker
 from datetime import datetime, timedelta
 import json
+from collections import Counter
 from pathlib import Path
 
 # Initialize Faker for Indian context
@@ -29,7 +30,44 @@ _SRC_DIR = Path(__file__).resolve().parent / "src"
 if _SRC_DIR.is_dir() and str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
-from fraud.simulate import aadhaar_hash, make_rng  # noqa: E402
+from fraud.simulate import aadhaar_hash, make_rng, split_for  # noqa: E402
+from fraud.config import get_config  # noqa: E402
+
+# =============================================================================
+# GROUND-TRUTH LABEL BOOKKEEPING
+# -----------------------------------------------------------------------------
+# The simulator records, per generated record, what (if anything) was injected.
+# Detection code (src/fraud/rules/*, src/fraud/pipeline.py) must never read
+# this: it is written out as data/labels.csv only.
+# =============================================================================
+
+# record_id -> list of (fraud_type, injected_rule_id)
+INJECTIONS: dict[str, list[tuple[str, str]]] = {}
+# record_id -> fraud_type  (is_fraud stays 0 - these are deliberate hard negatives)
+HARD_NEGATIVES: dict[str, str] = {}
+# fraud_type / rule_id -> number of injected records (actual, not estimated)
+INJECTION_COUNTS: Counter = Counter()
+
+LABEL_COLUMNS = [
+    "record_id",
+    "domain",
+    "is_fraud",
+    "fraud_type",
+    "injected_rule_id",
+    "split",
+]
+
+
+def _mark_fraud(record_id: str, fraud_type: str, rule_id: str) -> None:
+    """Record that ``record_id`` was injected as fraud for ``rule_id``."""
+    INJECTIONS.setdefault(str(record_id), []).append((fraud_type, rule_id))
+    INJECTION_COUNTS[fraud_type] += 1
+
+
+def _mark_hard_negative(record_id: str, fraud_type: str) -> None:
+    """Record a deliberate non-fraud hard negative (blank/null mobile)."""
+    HARD_NEGATIVES[str(record_id)] = fraud_type
+    INJECTION_COUNTS[fraud_type] += 1
 
 # =============================================================================
 # CONFIGURATION
@@ -117,6 +155,7 @@ def generate_beneficiaries():
         if i < mega_family_size:
             family_id = mega_family_id  # RULE_004: Mega Family
             fraud_tracker['RULE_004'] += 1
+            _mark_fraud(ben_id, 'mega_family', 'RULE_004')
         else:
             family_id = random.choice(family_ids)
         
@@ -124,22 +163,26 @@ def generate_beneficiaries():
         if random.random() < FRAUD_RATES['RULE_001_INVALID_MOBILE']:
             mobile = "9999999999"
             fraud_tracker['RULE_001'] += 1
+            _mark_fraud(ben_id, 'invalid_mobile', 'RULE_001')
         # RULE_013: Clone Detection (Mobile Sharing)
         elif i < len(clone_mobiles) * 5:  # Assign clone mobiles to first N beneficiaries
             mobile = clone_mobiles[i // 5]  # 5 people share same mobile
             fraud_tracker['RULE_013'] += 1
             clone_assignments.append(ben_id)
+            _mark_fraud(ben_id, 'mobile_sharing', 'RULE_013')
         
         # RULE_002: Underage with Job Card
         if random.random() < FRAUD_RATES['RULE_002_UNDERAGE_JOBCARD']:
             age = random.randint(5, 17)
             job_card_id = f"JC_{random.randint(100000, 999999)}"
             fraud_tracker['RULE_002'] += 1
+            _mark_fraud(ben_id, 'underage_jobcard', 'RULE_002')
         
         # RULE_003: Suspicious Age (>100)
         if random.random() < FRAUD_RATES['RULE_003_SUSPICIOUS_AGE']:
             age = random.randint(101, 150)
             fraud_tracker['RULE_003'] += 1
+            _mark_fraud(ben_id, 'suspicious_age', 'RULE_003')
         
         beneficiaries.append({
             'BeneficiaryID': ben_id,
@@ -153,6 +196,22 @@ def generate_beneficiaries():
             'JobCardID': job_card_id
         })
     
+    # RULE_013 hard negatives: ~blank_mobile_rate of *clean* beneficiaries get a
+    # null or blank mobile. These are missing data, not shared identity, so the
+    # rule must ignore them and they are labeled is_fraud=0.
+    blank_rate = get_config().simulator.blank_mobile_rate
+    clean_idx = [
+        i for i, row in enumerate(beneficiaries)
+        if row['BeneficiaryID'] not in INJECTIONS
+    ]
+    num_blank = min(len(clean_idx), int(NUM_BENEFICIARIES * blank_rate))
+    blank_rng = make_rng(get_config().seed + 100)
+    for pos, idx in enumerate(blank_rng.sample(clean_idx, num_blank)):
+        beneficiaries[idx]['MobileNumber'] = None if pos % 2 == 0 else ''
+        _mark_hard_negative(
+            beneficiaries[idx]['BeneficiaryID'], 'hard_negative_blank_mobile'
+        )
+
     df = pd.DataFrame(beneficiaries)
     df.to_csv('data/beneficiaries.csv', index=False)
     
@@ -165,6 +224,30 @@ def generate_beneficiaries():
 # DOMAIN 2: MGNREGA LABOR (TRANSACTIONS)
 # =============================================================================
 
+def _build_cartel_groups(valid_job_cards, sim):
+    """Return disjoint cartel groups of size [cartel_group_min_size, cartel_group_max_size].
+
+    Deterministic: draws group sizes and the shuffled pool from the global
+    seeded RNG, so a fixed seed always yields the same groups.
+    """
+    num_groups = max(0, sim.cartel_groups)
+    sizes = [
+        random.randint(sim.cartel_group_min_size, sim.cartel_group_max_size)
+        for _ in range(num_groups)
+    ]
+    pool = list(valid_job_cards)
+    random.shuffle(pool)
+    groups = []
+    cursor = 0
+    for size in sizes:
+        group = pool[cursor:cursor + size]
+        if not group:
+            break
+        groups.append(group)
+        cursor += size
+    return groups
+
+
 def generate_mgnrega_transactions(df_beneficiaries):
     """Generate MGNREGA transactions with Rules 5-8, 17 fraud patterns"""
     print(f"\n🔨 Generating {NUM_MGNREGA_TXNS} MGNREGA Transactions (Labor Fraud)...")
@@ -174,32 +257,26 @@ def generate_mgnrega_transactions(df_beneficiaries):
     
     fraud_tracker = {rule: 0 for rule in ['RULE_005', 'RULE_006', 'RULE_007', 'RULE_008', 'RULE_017']}
     
-    # RULE_017: Create cartel worker groups (same workers appearing together)
-    num_cartel_groups = int(len(valid_job_cards) * FRAUD_RATES['RULE_017_MUSTER_CARTEL'] / 8)
-    cartel_groups = []
-    for _ in range(num_cartel_groups):
-        cartel_size = random.randint(5, 10)
-        cartel_groups.append(random.sample(valid_job_cards, cartel_size))
+    # RULE_017: Cartel groups. Every member of a group appears together in *all*
+    # cartel_muster_rolls muster rolls, and the group's job cards are reserved so
+    # random transactions cannot dilute the co-occurrence rate. Members then have
+    # appearances == cartel_muster_rolls (> min_cartel_appearances) and pair rate
+    # == 1.0 (>= cartel_threshold), so the rule's gate passes.
+    sim = get_config().simulator
+    cartel_groups = _build_cartel_groups(valid_job_cards, sim)
+    cartel_cards = {card for group in cartel_groups for card in group}
+    random_pool = [card for card in valid_job_cards if card not in cartel_cards] or valid_job_cards
     
-    muster_roll_counter = 10000
-    
-    for i in range(NUM_MGNREGA_TXNS):
-        txn_id = f"TXN_MGN_{i:06d}"
-        
-        # RULE_017: Cartel - use cartel group workers together in same muster roll
-        if cartel_groups and i % 20 == 0 and i < len(cartel_groups) * 10:  # Every 20th txn, create cartel muster
-            cartel_group = cartel_groups[i // 20 % len(cartel_groups)]
-            muster_roll_id = f"MR_{muster_roll_counter}"
-            muster_roll_counter += 1
-            
-            # Create multiple transactions for this cartel group in same muster roll
+    for g, cartel_group in enumerate(cartel_groups):
+        for r in range(sim.cartel_muster_rolls):
+            muster_roll_id = f"MR_CARTEL_{g:02d}_{r:02d}"
             for job_card in cartel_group:
                 days_worked = random.randint(5, 15)
                 wage_rate = 230
                 work_code = f"WC_{random.randint(100, 999)}"
-                
+                txn_id = f"TXN_MGN_CARTEL_{g:02d}_{r:02d}_{job_card}"
                 transactions.append({
-                    'TransactionID': f"TXN_MGN_{i:06d}_{job_card}",
+                    'TransactionID': txn_id,
                     'JobCardID': job_card,
                     'WorkCode': work_code,
                     'MusterRollID': muster_roll_id,
@@ -209,9 +286,12 @@ def generate_mgnrega_transactions(df_beneficiaries):
                     'TotalAmount': days_worked * wage_rate
                 })
                 fraud_tracker['RULE_017'] += 1
-            continue
+                _mark_fraud(txn_id, 'muster_cartel', 'RULE_017')
+    
+    for i in range(NUM_MGNREGA_TXNS):
+        txn_id = f"TXN_MGN_{i:06d}"
         
-        job_card = random.choice(valid_job_cards)
+        job_card = random.choice(random_pool)
         
         # Default values
         days_worked = random.randint(5, 15)
@@ -222,11 +302,13 @@ def generate_mgnrega_transactions(df_beneficiaries):
         if random.random() < FRAUD_RATES['RULE_005_IMPOSSIBLE_HUMAN']:
             days_worked = random.randint(16, 30)
             fraud_tracker['RULE_005'] += 1
+            _mark_fraud(txn_id, 'impossible_human', 'RULE_005')
         
         # RULE_006: Ghost Project (WorkCode ends with _000)
         if random.random() < FRAUD_RATES['RULE_006_GHOST_PROJECT']:
             work_code = f"WC_{random.randint(100, 999)}_000"
             fraud_tracker['RULE_006'] += 1
+            _mark_fraud(txn_id, 'ghost_project', 'RULE_006')
         
         # Calculate expected amount
         expected_amount = days_worked * wage_rate
@@ -238,12 +320,14 @@ def generate_mgnrega_transactions(df_beneficiaries):
             discrepancy = random.randint(-2000, 5000)
             total_amount = expected_amount + discrepancy
             fraud_tracker['RULE_007'] += 1
+            _mark_fraud(txn_id, 'wage_theft', 'RULE_007')
         
         # RULE_008: Free Money (Days = 0 but Amount > 0)
         if random.random() < FRAUD_RATES['RULE_008_FREE_MONEY']:
             days_worked = 0
             total_amount = random.randint(1000, 5000)
             fraud_tracker['RULE_008'] += 1
+            _mark_fraud(txn_id, 'free_money', 'RULE_008')
         
         transactions.append({
             'TransactionID': txn_id,
@@ -288,29 +372,20 @@ def generate_pmjay_transactions(df_beneficiaries):
         'expensive': ['Cardiac Surgery', 'Kidney Transplant', 'Dialysis']
     }
     
-    # RULE_021: Create procedure mill hospitals (same procedure many times)
-    mill_hospitals = [f"HOSP_{random.randint(1, 10):03d}" for _ in range(3)]  # 3 mill hospitals
-    mill_procedures = [random.choice(procedures['surgery']) for _ in mill_hospitals]
-    
+    # RULE_021 procedure-mill claims are injected in one dedicated block after
+    # the main loop (see below), so here only the organic rules are assigned.
     for i in range(NUM_PMJAY_TXNS):
         claim_id = f"CLM_{i:06d}"
         
-        # RULE_021: Procedure Mill - assign many claims to mill hospitals with same procedure
-        if random.random() < FRAUD_RATES['RULE_021_PROCEDURE_MILL']:
-            mill_idx = i % len(mill_hospitals)
-            hospital_id = mill_hospitals[mill_idx]
-            procedure = mill_procedures[mill_idx]
-            ben_id = random.choice(ben_ids)
-            gender = gender_map.get(ben_id, 'M')
-            fraud_tracker['RULE_021'] += 1
         # RULE_010: Biological Mismatch (Male claiming Hysterectomy)
-        elif random.random() < FRAUD_RATES['RULE_010_BIO_MISMATCH']:
+        if random.random() < FRAUD_RATES['RULE_010_BIO_MISMATCH']:
             male_beneficiaries = [bid for bid, g in gender_map.items() if g == 'M']
             if male_beneficiaries:
                 ben_id = random.choice(male_beneficiaries)
                 gender = 'M'
                 procedure = random.choice(procedures['female_only'])
                 fraud_tracker['RULE_010'] += 1
+                _mark_fraud(claim_id, 'bio_mismatch', 'RULE_010')
             else:
                 ben_id = random.choice(ben_ids)
                 gender = gender_map.get(ben_id, 'M')
@@ -339,17 +414,20 @@ def generate_pmjay_transactions(df_beneficiaries):
         if random.random() < FRAUD_RATES['RULE_009_TIME_TRAVEL']:
             discharge_date = admission_date - timedelta(days=random.randint(1, 10))
             fraud_tracker['RULE_009'] += 1
+            _mark_fraud(claim_id, 'time_travel', 'RULE_009')
         
         # RULE_011: Massive Upcoding (General procedures > 50,000)
         if random.random() < FRAUD_RATES['RULE_011_MASSIVE_UPCODING']:
             procedure = random.choice(procedures['general'])
             claim_amount = random.randint(50001, 150000)
             fraud_tracker['RULE_011'] += 1
+            _mark_fraud(claim_id, 'massive_upcoding', 'RULE_011')
         
         # RULE_012: Blacklisted Hospital (HOSP_999)
         if random.random() < FRAUD_RATES['RULE_012_BLACKLISTED_HOSPITAL']:
             hospital_id = "HOSP_999"
             fraud_tracker['RULE_012'] += 1
+            _mark_fraud(claim_id, 'blacklisted_hospital', 'RULE_012')
         
         claims.append({
             'ClaimID': claim_id,
@@ -361,6 +439,29 @@ def generate_pmjay_transactions(df_beneficiaries):
             'ClaimAmount': claim_amount,
             'PatientStatus': random.choice(['Discharged', 'Referred', 'Recovered'])
         })
+    
+    # RULE_021: dedicated procedure-mill injection. Configurable; the default is
+    # one (hospital, procedure, month) group of 60 claims, above
+    # pmjay.procedure_mill_threshold (50). A fixed month keeps the group stable.
+    sim = get_config().simulator
+    mill_procedure = procedures['surgery'][0]
+    mill_admission = '2024-06-15'
+    for g in range(sim.procedure_mill_groups):
+        hospital_id = f"HOSP_MILL_{g:02d}"
+        for k in range(sim.procedure_mill_group_size):
+            claim_id = f"CLM_MILL_{g:02d}_{k:03d}"
+            claims.append({
+                'ClaimID': claim_id,
+                'BeneficiaryID': random.choice(ben_ids),
+                'HospitalID': hospital_id,
+                'AdmissionDate': mill_admission,
+                'DischargeDate': '2024-06-18',
+                'ProcedureName': mill_procedure,
+                'ClaimAmount': random.randint(30000, 100000),
+                'PatientStatus': 'Discharged',
+            })
+            fraud_tracker['RULE_021'] += 1
+            _mark_fraud(claim_id, 'procedure_mill', 'RULE_021')
     
     df = pd.DataFrame(claims)
     df.to_csv('data/transactions_pmjay.csv', index=False)
@@ -418,6 +519,60 @@ def generate_fraud_ground_truth(df_beneficiaries, df_mgnrega, df_pmjay):
 
 
 # =============================================================================
+# GROUND-TRUTH LABELS (data/labels.csv)
+# =============================================================================
+
+def _label_row(record_id, domain):
+    """Build one labels row from the recorded injections for ``record_id``."""
+    rid = str(record_id)
+    injections = INJECTIONS.get(rid)
+    if injections:
+        fraud_types = sorted({fraud_type for fraud_type, _ in injections})
+        rule_ids = sorted({rule_id for _, rule_id in injections})
+        return [rid, domain, 1, "|".join(fraud_types), "|".join(rule_ids), split_for(rid)]
+    if rid in HARD_NEGATIVES:
+        return [rid, domain, 0, HARD_NEGATIVES[rid], None, split_for(rid)]
+    return [rid, domain, 0, "", None, split_for(rid)]
+
+
+def write_labels(df_beneficiaries, df_mgnrega, df_pmjay):
+    """Write data/labels.csv: exactly one row per scannable record."""
+    rows = []
+    rows.extend(
+        _label_row(rid, 'Civil Registry')
+        for rid in df_beneficiaries['BeneficiaryID']
+    )
+    rows.extend(
+        _label_row(rid, 'MGNREGA Labor')
+        for rid in df_mgnrega['TransactionID']
+    )
+    rows.extend(
+        _label_row(rid, 'PM-JAY Medical')
+        for rid in df_pmjay['ClaimID']
+    )
+    labels = pd.DataFrame(rows, columns=LABEL_COLUMNS)
+    labels.to_csv('data/labels.csv', index=False)
+
+    hard_negatives = int((labels['fraud_type'] == 'hard_negative_blank_mobile').sum())
+    print(
+        f"   ✅ labels.csv created ({len(labels)} records, "
+        f"{int(labels['is_fraud'].sum())} fraud, {hard_negatives} hard negatives)"
+    )
+    return labels
+
+
+def print_injection_table():
+    """Print the actual injected record counts per fraud_type."""
+    print("\n" + "=" * 70)
+    print("📊 INJECTED RECORD COUNTS PER FRAUD TYPE")
+    print("-" * 70)
+    for fraud_type in sorted(INJECTION_COUNTS):
+        print(f"   {fraud_type:34s} {INJECTION_COUNTS[fraud_type]}")
+    print("-" * 70)
+    print(f"   {'TOTAL injected records':34s} {sum(INJECTION_COUNTS.values())}")
+
+
+# =============================================================================
 # MAIN EXECUTION
 # =============================================================================
 
@@ -426,7 +581,11 @@ if __name__ == "__main__":
     df_ben = generate_beneficiaries()
     df_mgn = generate_mgnrega_transactions(df_ben)
     df_pmjay = generate_pmjay_transactions(df_ben)
-    
+
+    # Ground-truth labels (one row per scannable record) and injection table.
+    write_labels(df_ben, df_mgn, df_pmjay)
+    print_injection_table()
+
     # Generate ground truth for ML training
     generate_fraud_ground_truth(df_ben, df_mgn, df_pmjay)
     
@@ -441,6 +600,7 @@ if __name__ == "__main__":
     print(f"   - data/beneficiaries.csv")
     print(f"   - data/transactions_mgnrega.csv")
     print(f"   - data/transactions_pmjay.csv")
+    print(f"   - data/labels.csv")
     print(f"   - output/reports/fraud_ground_truth.json")
     print(f"\n🔍 Next step: Run audit_scanner.py to detect the injected fraud!")
     print("="*70)

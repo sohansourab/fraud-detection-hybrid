@@ -89,6 +89,24 @@ class RiskBandsConfig:
 
 
 @dataclass(frozen=True)
+class SimulatorConfig:
+    """Injection volumes for the synthetic data simulator (module P2a).
+
+    These are the *generator* knobs: how much fraud to inject so that the
+    currently-inert rules (Rule 017 cartel, Rule 021 procedure mill) can fire,
+    plus the rate of blank-mobile hard negatives for Rule 013.
+    """
+
+    cartel_groups: int = 15
+    cartel_group_min_size: int = 4
+    cartel_group_max_size: int = 6
+    cartel_muster_rolls: int = 6
+    procedure_mill_groups: int = 1
+    procedure_mill_group_size: int = 60
+    blank_mobile_rate: float = 0.02
+
+
+@dataclass(frozen=True)
 class Config:
     """Root configuration object."""
 
@@ -99,6 +117,7 @@ class Config:
     pmjay: PmjayConfig = field(default_factory=PmjayConfig)
     cross_domain: CrossDomainConfig = field(default_factory=CrossDomainConfig)
     risk_bands: RiskBandsConfig = field(default_factory=RiskBandsConfig)
+    simulator: SimulatorConfig = field(default_factory=SimulatorConfig)
 
 
 def _build(cls: type, data: Any) -> Any:

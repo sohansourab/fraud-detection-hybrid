@@ -7,6 +7,7 @@ data - and therefore every downstream report id - is reproducible.
 """
 from __future__ import annotations
 
+import hashlib
 import random
 
 from fraud.config import get_config
@@ -24,3 +25,14 @@ def aadhaar_hash(rng: random.Random) -> str:
     for a given RNG state.
     """
     return f"{rng.getrandbits(48):012X}"
+
+
+def split_for(record_id: str, test_fraction: float = 0.2) -> str:
+    """Deterministically assign a record to the ``train`` or ``test`` split.
+
+    Uses an MD5 of the id (not the salted built-in ``hash``) so the split is
+    stable across processes and runs.
+    """
+    digest = hashlib.md5(str(record_id).encode("utf-8")).hexdigest()
+    bucket = int(digest[:8], 16) % 1000 / 1000.0
+    return "test" if bucket < test_fraction else "train"

@@ -39,3 +39,20 @@ risk_bands:
   low_max: 25
   medium_max: 50
   high_max: 75
+
+# Synthetic data simulator injections (module P2a).
+# These let the currently-inert rules fire and add Rule 013 hard negatives.
+simulator:
+  # Rule 017 (cartel): N groups of workers who co-occur in every muster roll.
+  cartel_groups: 15
+  cartel_group_min_size: 4
+  cartel_group_max_size: 6
+  # Each cartel member appears in this many muster rolls (must exceed
+  # mgnrega.min_cartel_appearances = 3 so the rule's appearances gate passes).
+  cartel_muster_rolls: 6
+  # Rule 021 (procedure mill): groups of same (hospital, procedure, month).
+  # One group of 60 clears pmjay.procedure_mill_threshold = 50.
+  procedure_mill_groups: 1
+  procedure_mill_group_size: 60
+  # Rule 013 hard negatives: fraction of beneficiaries with null/blank mobile.
+  blank_mobile_rate: 0.02
