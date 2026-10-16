@@ -335,7 +335,7 @@ All numbers are on synthetic labels. Unseen recall measures detection of injecte
 - Rule overlap grows with prevalence (22 / 70 / 244 at 2% / 5% / 10%), so per-rule numbers are not independent.
 - Unseen typologies have 12 / 14 / 13 events. That is too few for recall estimates.
 - ML thresholds are per-domain and not comparable across domains.
-- Only MGNREGA Labor is calibrated. Its precision drops from 0.786 (validation) to 0.476 (test).
+- Only MGNREGA Labor is calibrated; its ML precision drops from validation to test (see Hybrid detection, above).
 - RULE_025's cross-scheme recall is in-sample by construction (12 injected beneficiaries).
 - No real-world fraud performance is claimed, and no notice is claimed to be legally valid.
 - HYBRID is reported once on test; it selected rule-only and does not beat the rules on known typologies.
