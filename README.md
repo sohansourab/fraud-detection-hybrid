@@ -105,6 +105,8 @@ A comprehensive **hybrid fraud detection system** combining **deterministic rule
 - PM-JAY: 150 anomalies (5.00%)
 - **Total: 502 statistical anomalies**
 
+These are in-sample counts on synthetic data: the simulator injects the outliers the detector is meant to find, so they are not a generalization estimate.
+
 ---
 
 ## 📁 Project Structure
@@ -425,3 +427,4 @@ All numbers are on synthetic labels. Unseen recall measures detection of injecte
 - RULE_025's cross-scheme recall is in-sample by construction (12 injected beneficiaries).
 - No real-world fraud performance is claimed, and no notice is claimed to be legally valid.
 - HYBRID is reported once on test; it selected rule-only and does not beat the rules on known typologies.
+- The real-data track (IEEE-CIS) is unfinished: `src/fraud/external/` ships a loader with no committed data and no reported real-data results.
