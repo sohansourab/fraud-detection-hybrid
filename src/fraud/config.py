@@ -96,7 +96,7 @@ class CrossSchemeConfig:
     ``combos``, so Rule 25 has a real multi-scheme basis to fire on.
     """
 
-    beneficiaries: int = 25
+    beneficiaries: int = 12
     combos: list[list[str]] = field(
         default_factory=lambda: [
             ["Civil Registry", "MGNREGA Labor"],

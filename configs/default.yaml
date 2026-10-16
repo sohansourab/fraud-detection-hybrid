@@ -67,10 +67,12 @@ simulator:
   # scaling, any type below this floor is raised to it, unless doing so would
   # push total fraud above 1.5 x prevalence x scannable records.
   min_events_per_type: 10
-  # Dedicated cross-scheme injection for Rule 025 (module P2c): N beneficiaries
-  # each present (and flagged) in 2-3 schemes, so Rule 025 has a real basis.
+  # Dedicated cross-scheme injection for Rule 025 (module P2c; resized in P2d):
+  # N beneficiaries each present (and flagged) in 2-3 schemes, so Rule 025 has
+  # a real basis. A fixed count (not prevalence-driven) kept at >= the
+  # min_events_per_type floor without dominating the fraud mix.
   cross_scheme:
-    beneficiaries: 25
+    beneficiaries: 12
     combos:
       - ["Civil Registry", "MGNREGA Labor"]
       - ["MGNREGA Labor", "PM-JAY Medical"]

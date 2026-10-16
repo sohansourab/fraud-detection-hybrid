@@ -153,6 +153,70 @@ Simulator/config only; no rule, detection or evaluation code changed.
 - Realised prevalence: 244/10087 (2.42%) -> 304/10145 (**2.997%**, at the cap).
 - Regression test: `tests/test_cross_scheme.py`.
 
+## P2d - cross_scheme resize (25 -> 12 beneficiaries) and P2 close-out
+
+Data and docs only; no rule or evaluation code changed.
+
+**Decision.** `simulator.cross_scheme.beneficiaries` 25 -> **12**. The injection
+is a *fixed count*, not prevalence-driven. At 25 beneficiaries (50 records) the
+dedicated Rule 025 pattern was ~20% of all injected fraud at 0.02 prevalence and
+consumed the 1.5x floor cap; 12 beneficiaries still yield **24 records**, above
+`min_events_per_type` (10), while leaving headroom for the floor and keeping the
+cross-scheme share of fraud modest.
+
+**P2c per-type table (prevalence 0.02 / 0.05 / 0.10, in-sample):**
+
+| fraud_type | 0.02 | 0.05 | 0.10 | fraud_type | 0.02 | 0.05 | 0.10 |
+|---|---|---|---|---|---|---|---|
+| bio_mismatch | 0 | 11 | 20 | mobile_sharing | 5 | 20 | 43 |
+| blacklisted_hospital | 10 | 30 | 54 | muster_cartel | 36 | 96 | 180 |
+| cross_scheme | 50 | 50 | 50 | procedure_mill | 51 | 51 | 51 |
+| free_money | 16 | 46 | 97 | suspicious_age | 6 | 10 | 14 |
+| ghost_project | 23 | 56 | 103 | time_travel | 7 | 14 | 34 |
+| impossible_human | 29 | 69 | 130 | underage_jobcard | 10 | 15 | 31 |
+| invalid_mobile | 7 | 18 | 36 | wage_theft | 34 | 92 | 174 |
+| massive_upcoding | 11 | 27 | 70 | mega_family | 16 | 16 | 32 |
+
+**P2d per-type table (prevalence 0.02, in-sample):**
+
+| fraud_type | events | | fraud_type | events |
+|---|---|---|---|---|
+| bio_mismatch | 10 | | mobile_sharing | 10 |
+| blacklisted_hospital | 10 | | muster_cartel | 36 |
+| cross_scheme | **24** | | procedure_mill | 51 |
+| free_money | 16 | | suspicious_age | 10 |
+| ghost_project | 23 | | time_travel | 10 |
+| hard_negative_blank_mobile | 40 | | underage_jobcard | 10 |
+| impossible_human | 29 | | wage_theft | 34 |
+| invalid_mobile | 10 | | mega_family | 16 |
+| massive_upcoding | 11 | | **total** | 350 |
+
+- Floor at 0.02: with the smaller cross-scheme block the cap now has room, so
+  every thin type was **raised** to the floor: `bio_mismatch` 0->10,
+  `blacklisted_hospital` 7->10, `invalid_mobile` 7->10, `mobile_sharing` 5->10,
+  `suspicious_age` 6->10, `time_travel` 7->10, `underage_jobcard` 3->10. **No
+  type is left under 10 / "not evaluable"** at 0.02.
+- RULE_025 count: before **69** (P2c) -> after **48**. All 24 cross-scheme
+  records are flagged and the 12 injected beneficiaries each resolve to >= 2
+  schemes with **0 unresolved** links through the exact P1e joins.
+- Realised prevalence at 0.02: 2.997% (P2c) -> **2.996%** (303 fraud / 10115
+  scannable).
+- Total flags: 384 -> **362**; flagged records 309 -> **308**.
+- Input-hash change (deliberate refresh of `flags_after_p1d.json`):
+
+  | table | old md5 | new md5 |
+  |---|---|---|
+  | beneficiaries | `47fb9cabf74b2bef1f11a73f0520bd22` | `e6a698421161e7a38dc0ee248b801761` |
+  | mgnrega | `33260b9513b5b210277842aa006ba4f7` | `7f2fcf07dff223e454ed6aebc554f431` |
+  | pmjay | `465d100a4c973215c3d013c4c199654f` | `3675414b8f906b985a2217085c5cc61e` |
+
+- Determinism: two consecutive runs produce byte-identical `beneficiaries.csv`,
+  `transactions_mgnrega.csv`, `transactions_pmjay.csv` and `labels.csv` (MD5
+  match).
+- **In-sample warning:** RULE_025's recall on `cross_scheme` is 1.0 *by
+  construction* - the simulator injects exactly the multi-scheme pattern the
+  rule detects, so this is an in-sample figure, not a generalization estimate.
+
 ## Summary
 
 P1d/P1e changed only Rule 025:
@@ -167,8 +231,9 @@ Totals: flags 2044 -> 2605; flagged records 1776 -> 1776.
 Later modules changed the *generated data*, not rule logic: P2a (injections +
 labels) -> RULE_025 890 / total flags 3339; P2b (prevalence 0.02) -> RULE_025
 16 / total flags 271; P2c (min-events floor + cross-scheme) -> RULE_025 69 /
-total flags 384. The current committed snapshot is
-`tests/baseline/flags_after_p1d.json`; see the P2a, P2b and P2c sections above.
+total flags 384; P2d (cross_scheme 25->12) -> RULE_025 48 / total flags 362.
+The current committed snapshot is `tests/baseline/flags_after_p1d.json`; see the
+P2a, P2b, P2c and P2d sections above.
 
 
 
