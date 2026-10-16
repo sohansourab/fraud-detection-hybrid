@@ -245,8 +245,10 @@ templates when no API key is set, so the whole pipeline runs without internet.
 | `make demo` | `make data`, then `make eval`, then `make test` | see the rows above |
 
 `make eval` exits non-zero if the reconciliation guard fails, so a broken report
-cannot pass silently. The API and the dashboard are read-only: they render the
-report files and compute nothing.
+cannot pass silently. `make eval` (and therefore `make demo`) fits the ML layer
+first, because `reports/ml_scores.csv` is not committed; a fresh checkout needs
+no manual step. The API and the dashboard are read-only: they render the report
+files and compute nothing.
 
 ---
 

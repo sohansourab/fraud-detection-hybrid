@@ -20,9 +20,13 @@ jobs:
       - name: Lint
         run: ruff check src tests
 
-      # The tests and the eval harness read data/ (git-ignored), so generate it.
+      # data/ and reports/ml_scores.csv are git-ignored, so a fresh checkout has
+      # neither. Fit the ML layer too, otherwise test_ml_only/test_hybrid skip.
       - name: Generate data
         run: make data
+
+      - name: Fit ML layer
+        run: make train
 
       - name: Tests
         run: pytest -q

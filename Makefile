@@ -14,12 +14,14 @@ data:
 	$(PYTHON) data_simulator.py
 
 # Fit the per-domain IsolationForest and choose thresholds (reports/ml_scores.csv).
-train:
+train: data
 	$(PYTHON) -m fraud.ml
 
 # Rule evaluation + ML-only report + HYBRID report (reports/*.json, reports/*.md).
+# Depends on train: ml_only and hybrid read reports/ml_scores.csv, which is not
+# committed (git-ignored *.csv), so a fresh checkout must fit the ML layer first.
 # Exits non-zero if the reconciliation guard fails; the failure is NOT swallowed.
-eval:
+eval: train
 	$(PYTHON) -m fraud.evaluate
 	$(PYTHON) -m fraud.ml_only
 	$(PYTHON) -m fraud.hybrid
