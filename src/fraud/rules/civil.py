@@ -30,7 +30,9 @@ class InvalidMobileRule(Rule):
         matched = df[df["MobileNumber"] == dummy_mobile]
         rows = [
             (str(ben_id), {"mobile_number": str(mobile)})
-            for ben_id, mobile in zip(matched["BeneficiaryID"], matched["MobileNumber"])
+            for ben_id, mobile in zip(
+                matched["BeneficiaryID"], matched["MobileNumber"], strict=True
+            )
         ]
         return self._results(self.id, rows)
 
@@ -61,7 +63,7 @@ class UnderageWithJobCardRule(Rule):
         rows = [
             (str(ben_id), {"age": int(row_age), "job_card_id": str(job_card_id)})
             for ben_id, row_age, job_card_id in zip(
-                matched["BeneficiaryID"], matched["Age"], matched["JobCardID"]
+                matched["BeneficiaryID"], matched["Age"], matched["JobCardID"], strict=True
             )
         ]
         return self._results(self.id, rows)
@@ -86,7 +88,9 @@ class SuspiciousAgeRule(Rule):
         matched = df[mask]
         rows = [
             (str(ben_id), {"age": int(row_age)})
-            for ben_id, row_age in zip(matched["BeneficiaryID"], matched["Age"])
+            for ben_id, row_age in zip(
+                matched["BeneficiaryID"], matched["Age"], strict=True
+            )
         ]
         return self._results(self.id, rows)
 
@@ -115,7 +119,7 @@ class MegaFamilyRule(Rule):
         rows = [
             (str(ben_id), {"family_id": str(family_id), "family_size": int(size)})
             for ben_id, family_id, size in zip(
-                matched["BeneficiaryID"], matched["FamilyID"], size_per_row[mask]
+                matched["BeneficiaryID"], matched["FamilyID"], size_per_row[mask], strict=True
             )
         ]
         return self._results(self.id, rows)
@@ -154,7 +158,7 @@ class CloneDetectionRule(Rule):
         rows = [
             (str(ben_id), {"mobile_number": str(row_mobile), "shared_by": int(count)})
             for ben_id, row_mobile, count in zip(
-                matched["BeneficiaryID"], mobile[mask], shared_by[mask]
+                matched["BeneficiaryID"], mobile[mask], shared_by[mask], strict=True
             )
         ]
         return self._results(self.id, rows)

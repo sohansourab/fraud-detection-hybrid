@@ -14,9 +14,10 @@
 #               bug class).
 #
 # Not selected, deliberately:
-#   B905 (zip without strict=) is a real bug class but fixing it means editing
-#   src/fraud/rules/*, which this pass must not touch; it is left for a later
-#   pass rather than silently ignored.
+#   B905 (zip without strict=) is a real bug class; every zip() in
+#   src/fraud/rules/ now passes strict=True. It is NOT selected here because
+#   B905 also fires on 5 call sites outside src/fraud/rules/ that this pass
+#   must not edit (evaluate.py, hybrid.py, tests). See reports/baseline_diff.md.
 #   PLW1510 / PLW2901 / PLW0603 are stylistic pylint warnings (explicit
 #   `check=`, loop-name reuse, `global`), not correctness checks.
 target-version = "py311"

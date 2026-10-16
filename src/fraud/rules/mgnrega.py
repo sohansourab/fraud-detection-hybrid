@@ -32,7 +32,9 @@ class ImpossibleHumanRule(Rule):
         matched = df[mask]
         rows = [
             (str(txn_id), {"days_worked": int(days), "max_allowed": max_days})
-            for txn_id, days in zip(matched["TransactionID"], days_worked[mask])
+            for txn_id, days in zip(
+                matched["TransactionID"], days_worked[mask], strict=True
+            )
         ]
         return self._results(self.id, rows)
 
@@ -56,7 +58,9 @@ class GhostProjectRule(Rule):
         matched = df[mask]
         rows = [
             (str(txn_id), {"work_code": str(code)})
-            for txn_id, code in zip(matched["TransactionID"], work_code[mask])
+            for txn_id, code in zip(
+                matched["TransactionID"], work_code[mask], strict=True
+            )
         ]
         return self._results(self.id, rows)
 
@@ -97,6 +101,7 @@ class WageTheftRule(Rule):
                 wage_rate[mask],
                 expected_amount[mask],
                 total_amount[mask],
+                strict=True,
             )
         ]
         return self._results(self.id, rows)
@@ -121,7 +126,9 @@ class FreeMoneyRule(Rule):
         matched = df[mask]
         rows = [
             (str(txn_id), {"days_worked": 0, "amount_paid": int(total)})
-            for txn_id, total in zip(matched["TransactionID"], total_amount[mask])
+            for txn_id, total in zip(
+                matched["TransactionID"], total_amount[mask], strict=True
+            )
         ]
         return self._results(self.id, rows)
 
@@ -178,7 +185,9 @@ class MusterRollCartelRule(Rule):
             job_cards = df["JobCardID"].astype(str)
             mask = job_cards.isin(best_member.index).astype(bool)
             matched = df[mask]
-            for txn_id, card in zip(matched["TransactionID"], job_cards[mask]):
+            for txn_id, card in zip(
+                matched["TransactionID"], job_cards[mask], strict=True
+            ):
                 info = best_member.loc[card]
                 rows.append((
                     str(txn_id),

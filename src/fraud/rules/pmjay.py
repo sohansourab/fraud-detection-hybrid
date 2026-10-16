@@ -43,7 +43,10 @@ class TimeTravelRule(Rule):
                 },
             )
             for claim_id, adm, dis in zip(
-                matched["ClaimID"], matched["AdmissionDate"], matched["DischargeDate"]
+                matched["ClaimID"],
+                matched["AdmissionDate"],
+                matched["DischargeDate"],
+                strict=True,
             )
         ]
         return self._results(self.id, rows)
@@ -64,14 +67,20 @@ class BiologicalMismatchRule(Rule):
         df = tables["pmjay"]
         beneficiaries = tables["beneficiaries"]
         female_only = cfg.pmjay.female_only_procedures
-        gender_map = dict(zip(beneficiaries["BeneficiaryID"], beneficiaries["Gender"]))
+        gender_map = dict(zip(
+            beneficiaries["BeneficiaryID"],
+            beneficiaries["Gender"],
+            strict=True,
+        ))
         procedure = df["ProcedureName"].astype(str)
         gender = df["BeneficiaryID"].astype(str).map(gender_map)
         mask = ((gender == "M") & procedure.isin(female_only)).astype(bool)
         matched = df[mask]
         rows = [
             (str(claim_id), {"gender": "Male", "procedure": str(proc)})
-            for claim_id, proc in zip(matched["ClaimID"], procedure[mask])
+            for claim_id, proc in zip(
+                matched["ClaimID"], procedure[mask], strict=True
+            )
         ]
         return self._results(self.id, rows)
 
@@ -105,7 +114,7 @@ class MassiveUpcodingRule(Rule):
                 },
             )
             for claim_id, proc, amount in zip(
-                matched["ClaimID"], procedure[mask], claim_amount[mask]
+                matched["ClaimID"], procedure[mask], claim_amount[mask], strict=True
             )
         ]
         return self._results(self.id, rows)
@@ -130,7 +139,9 @@ class BlacklistedHospitalRule(Rule):
         matched = df[mask]
         rows = [
             (str(claim_id), {"hospital_id": str(hospital)})
-            for claim_id, hospital in zip(matched["ClaimID"], hospital_id[mask])
+            for claim_id, hospital in zip(
+                matched["ClaimID"], hospital_id[mask], strict=True
+            )
         ]
         return self._results(self.id, rows)
 
@@ -193,6 +204,7 @@ class ProcedureMillRule(Rule):
                 flagged["ProcedureName"],
                 flagged["month"],
                 flagged["procedure_count"],
+                strict=True,
             )
         ]
         return self._results(self.id, rows)

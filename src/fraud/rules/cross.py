@@ -49,7 +49,7 @@ class MultiSchemeVelocityRule(Rule):
         beneficiary_domains: dict[str, set] = {}
         beneficiary_records: dict[str, list[str]] = {}
         for record_id, domain in zip(
-            flagged["record_id"].astype(str), flagged["domain"].astype(str)
+            flagged["record_id"].astype(str), flagged["domain"].astype(str), strict=True
         ):
             ben_id = self._beneficiary_of(record_id, domain, lookup)
             if ben_id and ben_id.startswith(prefix):
@@ -97,16 +97,19 @@ class MultiSchemeVelocityRule(Rule):
             lookup["job_card_to_ben"] = dict(zip(
                 sub["JobCardID"].astype(str),
                 sub["BeneficiaryID"].astype(str),
+                strict=True,
             ))
         if mgnrega is not None:
             lookup["txn_to_job_card"] = dict(zip(
                 mgnrega["TransactionID"].astype(str),
                 mgnrega["JobCardID"].astype(str),
+                strict=True,
             ))
         if pmjay is not None:
             lookup["claim_to_ben"] = dict(zip(
                 pmjay["ClaimID"].astype(str),
                 pmjay["BeneficiaryID"].astype(str),
+                strict=True,
             ))
         return lookup
 
