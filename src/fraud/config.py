@@ -32,6 +32,7 @@ class PathsConfig:
     beneficiaries: str = "data/beneficiaries.csv"
     mgnrega: str = "data/transactions_mgnrega.csv"
     pmjay: str = "data/transactions_pmjay.csv"
+    labels: str = "data/labels.csv"
     output: str = "output/reports/fraud_report.json"
 
 
@@ -133,6 +134,29 @@ class SimulatorConfig:
 
 
 @dataclass(frozen=True)
+class MLConfig:
+    """Record-level IsolationForest scoring (module P4a).
+
+    Defaults live here rather than in ``configs/default.yaml`` (which is frozen
+    for P4a); the loader only overrides keys that are present in the file.
+    """
+
+    n_estimators: int = 200
+    random_state: int = 42
+    # ``auto`` lets IsolationForest pick the cutoff from the data instead of a
+    # fixed 5% contamination.
+    contamination: str = "auto"
+    # Fraction of the *train* split held out (stratified) to choose the score
+    # threshold; never the test split.
+    val_fraction: float = 0.2
+    # Minimum precision the chosen threshold must reach on the validation split.
+    precision_target: float = 0.5
+    # PM-JAY: number of most common procedures given their own code; the rest
+    # are the explicit "other" code 0.
+    top_procedures: int = 10
+
+
+@dataclass(frozen=True)
 class Config:
     """Root configuration object."""
 
@@ -144,6 +168,7 @@ class Config:
     cross_domain: CrossDomainConfig = field(default_factory=CrossDomainConfig)
     risk_bands: RiskBandsConfig = field(default_factory=RiskBandsConfig)
     simulator: SimulatorConfig = field(default_factory=SimulatorConfig)
+    ml: MLConfig = field(default_factory=MLConfig)
 
 
 def _build(cls: type, data: Any) -> Any:
