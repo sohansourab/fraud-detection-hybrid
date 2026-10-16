@@ -147,15 +147,64 @@ class Case:
 # ---------------------------------------------------------------------------
 
 def load_tables(cfg: Any | None = None) -> dict[str, pd.DataFrame]:
-    """Load the scanner's three input tables from the configured paths."""
+    """Load the scanner's three input tables exactly as the scanner does.
+
+    The dtypes and the mobile-number normalisation mirror ``audit_scanner``, so
+    the agent sees the same values the rules were evaluated on.
+    """
     cfg = cfg or get_config()
-    tables: dict[str, pd.DataFrame] = {}
-    for name in ("beneficiaries", "mgnrega", "pmjay"):
-        path = Path(getattr(cfg.paths, name))
-        if not path.is_absolute():
-            path = REPO_ROOT / path
-        tables[name] = pd.read_csv(path)
-    return tables
+
+    beneficiaries = pd.read_csv(
+        _resolve(cfg, "beneficiaries"),
+        dtype={
+            "BeneficiaryID": str,
+            "Name": str,
+            "Age": "Int64",
+            "Gender": str,
+            "MobileNumber": str,
+            "JobCardID": str,
+            "FamilyID": str,
+        },
+    )
+    beneficiaries["MobileNumber"] = (
+        beneficiaries["MobileNumber"]
+        .astype(str)
+        .str.replace(r"\D", "", regex=True)
+        .str.strip()
+    )
+
+    mgnrega = pd.read_csv(
+        _resolve(cfg, "mgnrega"),
+        dtype={
+            "TransactionID": str,
+            "JobCardID": str,
+            "WorkCode": str,
+            "MusterRollID": str,
+            "DaysWorked": "Int64",
+            "WageRate": "Int64",
+            "TotalAmount": "Int64",
+        },
+    )
+
+    pmjay = pd.read_csv(
+        _resolve(cfg, "pmjay"),
+        dtype={
+            "ClaimID": str,
+            "BeneficiaryID": str,
+            "HospitalID": str,
+            "ProcedureName": str,
+            "ClaimAmount": "Int64",
+            "PatientStatus": str,
+        },
+        parse_dates=["AdmissionDate", "DischargeDate"],
+    )
+
+    return {"beneficiaries": beneficiaries, "mgnrega": mgnrega, "pmjay": pmjay}
+
+
+def _resolve(cfg: Any, name: str) -> Path:
+    path = Path(getattr(cfg.paths, name))
+    return path if path.is_absolute() else REPO_ROOT / path
 
 
 def scan_flags(

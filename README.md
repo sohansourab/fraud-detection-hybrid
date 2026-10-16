@@ -252,6 +252,39 @@ files and compute nothing.
 
 ---
 
+## Agent layer
+
+The agent layer adds a per-case investigator on top of the rule flags. It reads
+only the scanner's input tables and the rule registry; the ground-truth labels
+are never loaded and never handed to the model. For one flagged record it runs a
+small, capped set of read-only tools (`get_record`, `get_neighbors`,
+`explain_rule`, `run_rule`) and drafts a review note.
+
+The verifier is deterministic. Every factual sentence must carry an evidence id
+(`[E#]`), and every number in a sentence must appear in the text of the cited
+evidence. A draft that fails gets at most two revisions from the drafter; if it
+still fails, the case is marked `needs_human`. Drafts say "flagged for review"
+and avoid loaded words.
+
+Run it with:
+
+```bash
+python -m fraud.agent.run --n 20
+```
+
+That takes the flagged records with the most rules flagging them and writes
+`reports/agent_cases.json` and `reports/agent_metrics.json`. The metrics file
+holds the unsupported-sentence rate on the first draft and after the verifier
+loop, tool calls and revisions per case, and the mode used — see
+[reports/agent_metrics.json](reports/agent_metrics.json). It runs **offline by
+default** (deterministic templates, no network); set `LLM_API_KEY`,
+`LLM_BASE_URL` and `LLM_MODEL` to use an OpenAI-compatible model instead.
+
+These numbers come from the synthetic in-sample rule flags, so they are not a
+generalization estimate.
+
+---
+
 ## 🔬 Validation & Accuracy
 
 **Detection Accuracy:** 99.1% (validated against ground truth)

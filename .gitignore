@@ -23,3 +23,5 @@ output/
 !reports/ml_only.json
 # Keep the HYBRID analysis result (source of truth for the P4c numbers)
 !reports/hybrid.json
+# Keep the agent-layer metrics (the source linked from the README)
+!reports/agent_metrics.json

@@ -1,0 +1,67 @@
+{
+  "generated_by": "fraud.agent.run",
+  "disclaimer": "Synthetic data, in-sample: cases come from the rule scan on the simulator's own injections, so these numbers are not a generalization estimate.",
+  "mode": "offline",
+  "n_cases": 20,
+  "unsupported_sentence_rate_before": 0.0,
+  "unsupported_sentence_rate_after": 0.0,
+  "sentences_before": 120,
+  "unsupported_before": 0,
+  "sentences_after": 120,
+  "unsupported_after": 0,
+  "tool_calls_per_case": {
+    "mean": 6.0,
+    "max": 6,
+    "values": [
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6,
+      6
+    ]
+  },
+  "revisions_per_case": {
+    "mean": 0.0,
+    "max": 0,
+    "values": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "status_counts": {
+    "verified": 20
+  }
+}
