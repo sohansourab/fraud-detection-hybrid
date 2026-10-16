@@ -152,3 +152,32 @@ def test_detector_rows_reconcile(payload: dict) -> None:
         hybrid = next(r for r in domain["detectors"] if r["detector"] == "HYBRID")
         assert split["known_caught"] == hybrid["tp"]
         assert split["unseen_caught"] == hybrid["other_fraud"]
+
+
+def test_selection_set_has_no_room(payload: dict) -> None:
+    # Check 1: the rules are perfect on the selection rows, so the candidate
+    # comparison cannot distinguish them. This must be stated, not implied.
+    selection = payload["selection"]
+    assert selection["selection_set_has_room"] is False
+    assert selection["rule_only_val_fp"] == 0
+    assert selection["rule_only_val_fn"] == 0
+
+
+def test_unseen_recall_is_not_evaluable(payload: dict) -> None:
+    # Check 2 (part): 4 unseen events is too few for a recall estimate.
+    for domain in payload["domains"]:
+        split = domain["hybrid_recall_split"]
+        if split["unseen_fraud"] < 10:
+            assert split["unseen_evaluation_status"] == "not evaluable"
+            assert split["unseen_note"]
+
+
+def test_cross_rule_overlap_is_reported(payload: dict) -> None:
+    # Check 2: the aggregate OTHER_FRAUD is 0, but the rule cross-rule overlap is
+    # not. Both must be visible so the zero is not read as a filter artefact.
+    domain = payload["domains"][0]
+    rows = {r["detector"]: r for r in domain["detectors"]}
+    assert rows["RULES_ONLY"]["cross_rule_overlap"] == 3
+    assert rows["HYBRID"]["cross_rule_overlap"] == 3
+    assert rows["RULES_ONLY"]["other_fraud"] == 0
+    assert rows["HYBRID"].get("equals_detector") == "RULES_ONLY"

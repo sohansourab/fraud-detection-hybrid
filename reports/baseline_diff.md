@@ -428,10 +428,13 @@ was added to `configs/default.yaml` and a `HybridConfig` to `src/fraud/config.py
   rule_first 0.939. **No candidate beat the rule-only baseline**, so the
   selected combination is `rule_only` (a HYBRID that does not beat rules on
   known typologies is not reported as an improvement).
-- Test, MGNREGA (reported once, including unseen): RULES_ONLY 22 TP / 0 FP /
-  0 OTHER / 0 FN (P 1.000, R 1.000, F1 1.000); ML_ONLY 10 / 11 / 0 / 12
-  (P 0.476, R 0.455, F1 0.465); HYBRID = rule_only. HYBRID known vs unseen
-  recall on test: known 22 / 22 (1.000), unseen 0 / 4 (0.000).
+- Test, MGNREGA (reported once, including unseen): HYBRID = rules-only
+  (selected) 22 TP / 0 FP / 0 OTHER / 0 FN (P 1.000, R 1.000, F1 1.000);
+  ML_ONLY 10 / 11 / 0 / 12 (P 0.476, R 0.455, F1 0.465). HYBRID is shown as
+  one row, not two, because the selected combination is `rule_only` and so
+  HYBRID and RULES_ONLY are the same detector by construction. HYBRID known vs
+  unseen recall on test: known 22 / 22 (1.000); unseen 0 / 4 is **not
+  evaluable** (4 events is not a recall estimate).
 - Routing (enforced in code): only CALIBRATED domains enter the main table;
   WEAK and UNCALIBRATED go to the excluded block with their val counts. Civil
   (WEAK) and PM-JAY (UNCALIBRATED) are excluded.
@@ -441,7 +444,33 @@ was added to `configs/default.yaml` and a `HybridConfig` to `src/fraud/config.py
   `test_select_combination_refuses_test_rows`,
   `test_calibration_expectations`,
   `test_only_calibrated_domains_in_main_table`,
-  `test_detector_rows_reconcile`, ...).
+  `test_detector_rows_reconcile`,
+  `test_selection_set_has_no_room`,
+  `test_unseen_recall_is_not_evaluable`,
+  `test_cross_rule_overlap_is_reported`).
+
+### P4c review checks
+
+Two checks run after the first P4c report, both now encoded in the report.
+
+- **Check 1 - did the selection have room to differ? No.** On the MGNREGA
+  selection rows (806) the rules are perfect: rule-only TP 23, FP 0, FN 0
+  (`test_selection_set_has_no_room`). F1 cannot exceed 1.000, so the rule-only
+  baseline is trivially optimal and the candidate comparison carries no
+  information about the candidates; it only shows which candidates add false
+  positives. The report states this explicitly.
+- **Check 2 - is `OTHER_FRAUD` 0 a filter artefact? No, but it is a different
+  quantity.** The aggregate `OTHER_FRAUD` column counts flagged *unseen* fraud;
+  on MGNREGA test neither detector flags any of the 4 unseen, so it is 0. The
+  `evaluate.py` cross-rule overlap (a rule flags a fraud record injected for a
+  different rule) is a separate diagnostic and is **3** on MGNREGA test (2 of
+  them RULE_025). It sits in all three domains (Civil 2, MGNREGA 3, PM-JAY 4 on
+  test), not only Civil/PM-JAY. The report now carries a `cross-rule overlap`
+  column so the two are never confused (`test_cross_rule_overlap_is_reported`).
+- **ML instability is the main finding.** MGNREGA ML_ONLY precision falls from
+  0.786 (val) to 0.476 (test), a drop of 0.310; F1 0.595 -> 0.465. The ML score
+  is unstable across splits, which is why the only calibrated domain's ML signal
+  does not support a HYBRID that beats rules.
 
 ## Summary
 

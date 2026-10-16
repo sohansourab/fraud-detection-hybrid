@@ -26,6 +26,9 @@
     "selected_val_f1": 1.0,
     "no_candidate_beat_rule_only": true,
     "rule_only_val_f1": 1.0,
+    "rule_only_val_fp": 0,
+    "rule_only_val_fn": 0,
+    "selection_set_has_room": false,
     "candidates": [
       {
         "combination": "rule_only",
@@ -138,6 +141,7 @@
           "unseen_fraud": 4,
           "known_recall": 1.0,
           "unseen_recall": 0.0,
+          "cross_rule_overlap": 3,
           "evaluation_status": "in-sample",
           "calibration_status": "CALIBRATED",
           "selection_rows_used": 806,
@@ -157,6 +161,7 @@
           "unseen_fraud": 4,
           "known_recall": 0.45454545454545453,
           "unseen_recall": 0.0,
+          "cross_rule_overlap": 3,
           "evaluation_status": "in-sample",
           "calibration_status": "CALIBRATED",
           "selection_rows_used": 806,
@@ -176,19 +181,45 @@
           "unseen_fraud": 4,
           "known_recall": 1.0,
           "unseen_recall": 0.0,
+          "cross_rule_overlap": 3,
+          "equals_detector": "RULES_ONLY",
           "evaluation_status": "in-sample",
           "calibration_status": "CALIBRATED",
           "selection_rows_used": 806,
           "leakage_note": "Selection uses validation rows only, with the unseen typologies excluded. See the 'Threshold-selection leakage' section of reports/ml_only.md: ml.py carves its val split out of the simulator's train split, so unseen rows would otherwise leak into selection. Here they never choose a threshold or a combination rule."
         }
       ],
+      "ml_val_to_test_gap": {
+        "val": {
+          "flags": 14,
+          "tp": 11,
+          "fp": 3,
+          "fn": 12,
+          "precision": 0.7857142857142857,
+          "recall": 0.4782608695652174,
+          "f1": 0.5945945945945946
+        },
+        "test": {
+          "flags": 21,
+          "tp": 10,
+          "fp": 11,
+          "fn": 12,
+          "precision": 0.47619047619047616,
+          "recall": 0.45454545454545453,
+          "f1": 0.46511627906976744
+        },
+        "precision_drop": 0.30952380952380953,
+        "recall_drop": 0.023715415019762875
+      },
       "hybrid_recall_split": {
         "known_caught": 22,
         "known_fraud": 22,
         "known_recall": 1.0,
         "unseen_caught": 0,
         "unseen_fraud": 4,
-        "unseen_recall": 0.0
+        "unseen_recall": 0.0,
+        "unseen_evaluation_status": "not evaluable",
+        "unseen_note": "4 unseen events; fewer than 10 is not a recall estimate."
       },
       "evaluation_status": "in-sample",
       "calibration_status": "CALIBRATED",

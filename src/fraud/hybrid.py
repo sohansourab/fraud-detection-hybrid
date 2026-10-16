@@ -120,7 +120,37 @@ def build_frame(cfg: Config) -> tuple[pd.DataFrame, dict[str, set[str]]]:
     merged["unseen"] = merged["fraud_type"].map(is_unseen)
     merged["rule_flagged"] = merged["record_id"].isin(rule_records)
     merged["severity"] = merged["record_id"].map(lambda r: severity.get(r, 0))
+    merged["cross_overlap"] = _cross_overlap(merged, rule_flags)
     return merged, rule_flags
+
+
+def _cross_overlap(
+    frame: pd.DataFrame, rule_flags: dict[str, set[str]]
+) -> pd.Series:
+    """True where a rule flagged a fraud record injected for a *different* rule.
+
+    This is :mod:`fraud.evaluate`'s ``OTHER_FRAUD`` (cross-rule overlap). It is a
+    property of the rule flags, so it is *not* the aggregate detector's
+    ``other_fraud`` bucket (which counts flagged unseen fraud).
+    """
+    flagged_by: dict[str, set[str]] = {}
+    for rule_id, records in rule_flags.items():
+        for record in records:
+            flagged_by.setdefault(record, set()).add(rule_id)
+
+    def overlap(record_id: str, injected: str) -> bool:
+        injected_rules = {r.strip() for r in str(injected).split("|") if r.strip()}
+        return bool(flagged_by.get(record_id, set()) - injected_rules)
+
+    return pd.Series(
+        [
+            overlap(record_id, injected)
+            for record_id, injected in zip(
+                frame["record_id"], frame["injected_rule_id"]
+            )
+        ],
+        index=frame.index,
+    )
 
 
 def selection_rows(frame: pd.DataFrame) -> pd.DataFrame:
@@ -200,6 +230,10 @@ def detector_metrics(flag: pd.Series, frame: pd.DataFrame) -> dict[str, Any]:
     precision, recall, f1 = _prf(tp, fp, fn)
     known_total = int(known.sum())
     unseen_total = int(unseen.sum())
+    if "cross_overlap" in frame.columns:
+        cross = int((flag & frame["cross_overlap"].astype(bool)).sum())
+    else:
+        cross = 0
     return {
         "flags": flagged,
         "tp": tp,
@@ -213,6 +247,9 @@ def detector_metrics(flag: pd.Series, frame: pd.DataFrame) -> dict[str, Any]:
         "unseen_fraud": unseen_total,
         "known_recall": (tp / (tp + fn)) if (tp + fn) else None,
         "unseen_recall": (other / unseen_total) if unseen_total else None,
+        # Cross-rule overlap (fraud.evaluate's OTHER_FRAUD notion): rule flags on
+        # records injected for a different rule. Distinct from ``other_fraud``.
+        "cross_rule_overlap": cross,
     }
 
 
@@ -350,6 +387,13 @@ def run(write: bool = True) -> dict[str, Any]:
     selected, candidates = select_combination(cal_selection, cfg)
     rule_only_f1 = next(c["val_f1"] for c in candidates if c["combination"] == RULE_ONLY)
     selected_f1 = next(c["val_f1"] for c in candidates if c["combination"] == selected)
+    rule_only_val_fp = next(c["val_fp"] for c in candidates if c["combination"] == RULE_ONLY)
+    rule_only_val_fn = next(c["val_fn"] for c in candidates if c["combination"] == RULE_ONLY)
+    # If the rules are perfect on the selection rows, no candidate can beat them
+    # and the selection carries no information about the candidates.
+    selection_has_room = bool(rule_only_val_fp + rule_only_val_fn)
+
+    min_events = cfg.simulator.min_events_per_type
 
     # One-shot test report, CALIBRATED domains only.
     test = normed[normed["split"] == "test"]
@@ -361,20 +405,51 @@ def run(write: bool = True) -> dict[str, Any]:
         for detector in DETECTORS:
             metrics = detector_metrics(_detector_flag(group, detector, selected, cfg), group)
             row = {"detector": detector, **metrics}
+            if detector == "HYBRID" and selected == RULE_ONLY:
+                row["equals_detector"] = "RULES_ONLY"
             detectors.append(_stamp(row, statuses[domain], rows_used))
         hybrid = next(r for r in detectors if r["detector"] == "HYBRID")
+        test_ml = next(r for r in detectors if r["detector"] == "ML_ONLY")
+        val_group = selection[selection["domain"] == domain]
+        val_ml = detector_metrics(val_group["ml_flag"] == 1, val_group)
+        unseen_fraud = hybrid["unseen_fraud"]
         domains.append(_stamp({
             "domain": domain,
             "selection_rows_used": rows_used,
             "val": val_stats[domain],
             "detectors": detectors,
+            "ml_val_to_test_gap": {
+                "val": {k: val_ml[k] for k in (
+                    "flags", "tp", "fp", "fn", "precision", "recall", "f1")},
+                "test": {k: test_ml[k] for k in (
+                    "flags", "tp", "fp", "fn", "precision", "recall", "f1")},
+                "precision_drop": (
+                    val_ml["precision"] - test_ml["precision"]
+                    if val_ml["precision"] is not None and test_ml["precision"] is not None
+                    else None
+                ),
+                "recall_drop": (
+                    val_ml["recall"] - test_ml["recall"]
+                    if val_ml["recall"] is not None and test_ml["recall"] is not None
+                    else None
+                ),
+            },
             "hybrid_recall_split": {
                 "known_caught": hybrid["tp"],
                 "known_fraud": hybrid["known_fraud"],
                 "known_recall": hybrid["known_recall"],
                 "unseen_caught": hybrid["other_fraud"],
-                "unseen_fraud": hybrid["unseen_fraud"],
+                "unseen_fraud": unseen_fraud,
                 "unseen_recall": hybrid["unseen_recall"],
+                "unseen_evaluation_status": (
+                    "in-sample" if unseen_fraud >= min_events else "not evaluable"
+                ),
+                "unseen_note": (
+                    f"{unseen_fraud} unseen events; fewer than {min_events} is not "
+                    "a recall estimate."
+                    if unseen_fraud < min_events
+                    else ""
+                ),
             },
         }, statuses[domain], rows_used))
 
@@ -414,6 +489,9 @@ def run(write: bool = True) -> dict[str, Any]:
             "selected_val_f1": selected_f1,
             "no_candidate_beat_rule_only": selected == RULE_ONLY,
             "rule_only_val_f1": rule_only_f1,
+            "rule_only_val_fp": rule_only_val_fp,
+            "rule_only_val_fn": rule_only_val_fn,
+            "selection_set_has_room": selection_has_room,
             "candidates": candidates,
         },
         "domains": domains,
@@ -468,22 +546,40 @@ def _selection_lines(payload: dict[str, Any]) -> list[str]:
             f"{_fmt(sel['selected_val_f1'])}, rule-only baseline "
             f"{_fmt(sel['rule_only_val_f1'])})."
         )
+    if not sel["selection_set_has_room"]:
+        lines.append("")
+        lines.append(
+            f"> **The selection told us nothing.** The rules are perfect on the "
+            f"selection rows (rule-only FP {sel['rule_only_val_fp']}, FN "
+            f"{sel['rule_only_val_fn']}), so F1 cannot exceed 1.000 and the "
+            f"rule-only baseline is trivially optimal. The candidate comparison "
+            f"below has no room to differ; it only shows which candidates add "
+            f"false positives."
+        )
     lines.append("")
     return lines
 
 
 def _test_table(domains: list[dict[str, Any]]) -> list[str]:
     lines = [
-        "| domain | detector | flags | TP | FP | OTHER_FRAUD | FN | precision "
-        "| recall | F1 |",
-        "|---|---|---|---|---|---|---|---|---|---|",
+        "| domain | detector | flags | TP | FP | OTHER_FRAUD | FN | cross-rule "
+        "overlap | precision | recall | F1 |",
+        "|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for domain in domains:
         for row in domain["detectors"]:
+            if row.get("equals_detector") == "RULES_ONLY":
+                # HYBRID is the rule-only detector by construction: report once,
+                # not as two apparently independent results.
+                continue
+            label = row["detector"]
+            if row["detector"] == "RULES_ONLY":
+                label = "HYBRID = rules-only (selected)"
             lines.append(
-                f"| {domain['domain']} | {row['detector']} | {row['flags']} "
+                f"| {domain['domain']} | {label} | {row['flags']} "
                 f"| {row['tp']} | {row['fp']} | {row['other_fraud']} "
-                f"| {row['fn']} | {_fmt(row['precision'])} "
+                f"| {row['fn']} | {row['cross_rule_overlap']} "
+                f"| {_fmt(row['precision'])} "
                 f"| {_fmt(row['recall'])} | {_fmt(row['f1'])} |"
             )
     return lines
@@ -497,11 +593,34 @@ def _split_lines(domains: list[dict[str, Any]]) -> list[str]:
     ]
     for domain in domains:
         split = domain["hybrid_recall_split"]
+        unseen_recall = (
+            "not evaluable"
+            if split["unseen_evaluation_status"] != "in-sample"
+            else _fmt(split["unseen_recall"])
+        )
         lines.append(
             f"| {domain['domain']} | {split['known_caught']} / {split['known_fraud']} "
             f"| {_fmt(split['known_recall'])} | {split['unseen_caught']} / "
-            f"{split['unseen_fraud']} | {_fmt(split['unseen_recall'])} |"
+            f"{split['unseen_fraud']} | {unseen_recall} |"
         )
+    return lines
+
+
+def _ml_gap_lines(domains: list[dict[str, Any]]) -> list[str]:
+    lines = [
+        "| domain | split | flags | TP | FP | FN | precision | recall | F1 |",
+        "|---|---|---|---|---|---|---|---|---|",
+    ]
+    for domain in domains:
+        gap = domain["ml_val_to_test_gap"]
+        for split_name in ("val", "test"):
+            row = gap[split_name]
+            lines.append(
+                f"| {domain['domain']} | {split_name} | {row['flags']} "
+                f"| {row['tp']} | {row['fp']} | {row['fn']} "
+                f"| {_fmt(row['precision'])} | {_fmt(row['recall'])} "
+                f"| {_fmt(row['f1'])} |"
+            )
     return lines
 
 
@@ -530,7 +649,10 @@ def render_markdown(payload: dict[str, Any]) -> str:
         "`TP` = known (rule-injected) fraud caught; `OTHER_FRAUD` = flagged fraud "
         "with no rule injection (the unseen typologies); `FP` = flagged "
         "`is_fraud=0`. Precision is `TP / (TP + FP)`; recall is `TP / (TP + FN)` "
-        "over known fraud. Unseen recall is reported separately.",
+        "over known fraud. Unseen recall is reported separately. `cross-rule "
+        "overlap` is a separate rule diagnostic (`evaluate.py`'s OTHER_FRAUD): "
+        "flagged records injected for a *different* rule. It is not the "
+        "aggregate `OTHER_FRAUD` column.",
         "",
     ]
     lines.extend(_selection_lines(payload))
@@ -542,11 +664,42 @@ def render_markdown(payload: dict[str, Any]) -> str:
     else:
         lines.append("_No CALIBRATED domain: HYBRID is not reported in the main table._")
     lines.append("")
+    if any(row.get("equals_detector") == "RULES_ONLY"
+           for d in payload["domains"] for row in d["detectors"]):
+        lines.append(
+            "> `HYBRID = rules-only (selected)`: the selected combination is "
+            "`rule_only`, so HYBRID and RULES_ONLY are the same detector and "
+            "agree by construction. They are shown as one row."
+        )
+        lines.append("")
 
     lines.append("### HYBRID known vs unseen recall (test)")
     lines.append("")
     if payload["domains"]:
         lines.extend(_split_lines(payload["domains"]))
+        for domain in payload["domains"]:
+            note = domain["hybrid_recall_split"].get("unseen_note")
+            if note:
+                lines.append("")
+                lines.append(f"> {domain['domain']} unseen: {note}")
+    else:
+        lines.append("_No CALIBRATED domain._")
+    lines.append("")
+
+    lines.append("### ML val to test gap (main finding)")
+    lines.append("")
+    if payload["domains"]:
+        lines.extend(_ml_gap_lines(payload["domains"]))
+        for domain in payload["domains"]:
+            gap = domain["ml_val_to_test_gap"]
+            lines.append("")
+            lines.append(
+                f"> {domain['domain']} ML precision falls from "
+                f"{_fmt(gap['val']['precision'])} (val) to "
+                f"{_fmt(gap['test']['precision'])} (test): a drop of "
+                f"{_fmt(gap['precision_drop'])}. The ML score is unstable "
+                f"across splits."
+            )
     else:
         lines.append("_No CALIBRATED domain._")
     lines.append("")
