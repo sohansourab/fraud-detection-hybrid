@@ -227,6 +227,29 @@ Output: `output/notices/{domain}/*.pdf`
 
 ---
 
+## Running it
+
+Everything below is a Makefile target. Every Python target runs with
+`PYTHONPATH=src`, and the LLM agents fall back to deterministic offline
+templates when no API key is set, so the whole pipeline runs without internet.
+
+| command | what it does | artifact |
+|---|---|---|
+| `make data` | generate the synthetic dataset | `data/*.csv` |
+| `make train` | fit the per-domain IsolationForest and choose thresholds | `reports/ml_scores.csv` |
+| `make eval` | rule evaluation, ML-only report and HYBRID report | `reports/metrics.{json,md}`, `reports/ml_only.{json,md}`, `reports/hybrid.{json,md}` |
+| `make test` | run the test suite | console output |
+| `make lint` | static checks over `src` and `tests` | console output |
+| `make api` | serve the reports read-only over HTTP | `http://localhost:8000` |
+| `make ui` | open the read-only Streamlit dashboard | `http://localhost:8501` |
+| `make demo` | `make data`, then `make eval`, then `make test` | see the rows above |
+
+`make eval` exits non-zero if the reconciliation guard fails, so a broken report
+cannot pass silently. The API and the dashboard are read-only: they render the
+report files and compute nothing.
+
+---
+
 ## 🔬 Validation & Accuracy
 
 **Detection Accuracy:** 99.1% (validated against ground truth)

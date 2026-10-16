@@ -1,0 +1,12 @@
+# Ruff configuration.
+#
+# The selection is written out explicitly because ruff's built-in default rule
+# set changes between releases (0.17 enables many more rules than earlier
+# versions did). Pinning it keeps `make lint` and CI stable and green across
+# ruff upgrades instead of turning every release into a repo-wide edit.
+# E4/E7/E9 are pycodestyle errors and F is pyflakes (undefined names, unused
+# imports/variables) - the rules that catch real mistakes.
+target-version = "py311"
+
+[lint]
+select = ["E4", "E7", "E9", "F"]
