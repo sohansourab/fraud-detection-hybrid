@@ -328,26 +328,14 @@ All numbers are on synthetic labels. Unseen recall measures detection of injecte
 
 ---
 
-## ⚠️ Limitations
+## Limitations
 
-- **In-sample evaluation only.** The rule metrics in `reports/metrics.md` (run
-  with `make eval`) are scored against the same injections the simulator
-  planted, so they are optimistic and are *not* generalization estimates.
-- **Cross-scheme detection is not validated.** The Rule 025 multi-scheme
-  injection only shows that planted cross-scheme records were generated and
-  joined correctly; it says nothing about whether the rule would catch real
-  cross-scheme fraud.
-- **ML layer is in-sample and per-domain.** The ML-only analysis
-  (`reports/ml_only.md`, `python -m fraud.ml_only`) is scored on the synthetic
-  labels at prevalence 0.02 only. ML thresholds are chosen per domain and are
-  **not comparable across domains**. The `HYBRID` detector is implemented and
-  reported once on test (`reports/hybrid.md`, `python -m fraud.hybrid`); it
-  selected rule-only and does not beat the rules on known typologies (see
-  *Hybrid detection*, above).
-- **PM-JAY is not calibrated and stays excluded.** Its earlier CALIBRATED label
-  rested on unseen val rows that leaked into the threshold split. P4c excludes
-  those rows from selection: without them PM-JAY's validation precision is
-  0.429, below the 0.5 target, so it reads UNCALIBRATED and is excluded from the
-  HYBRID main table (see *Hybrid detection*, above).
-
-**⚠️ Disclaimer:** This is a demonstration system using synthetic data. For production use, integrate with actual government databases and legal frameworks.
+- Synthetic data only. All labels come from our own simulator.
+- In-sample evaluation: rule precision and recall of 1.00 are built in by construction, because the simulator injects the patterns the rules detect.
+- Rule overlap grows with prevalence (22 / 70 / 244 at 2% / 5% / 10%), so per-rule numbers are not independent.
+- Unseen typologies have 12 / 14 / 13 events. That is too few for recall estimates.
+- ML thresholds are per-domain and not comparable across domains.
+- Only MGNREGA Labor is calibrated. Its precision drops from 0.786 (validation) to 0.476 (test).
+- RULE_025's cross-scheme recall is in-sample by construction (12 injected beneficiaries).
+- No real-world fraud performance is claimed, and no notice is claimed to be legally valid.
+- HYBRID is reported once on test; it selected rule-only and does not beat the rules on known typologies.
