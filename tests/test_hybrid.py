@@ -6,7 +6,7 @@ Covers:
 * the combination is chosen on the validation split only (test rows are refused);
 * the per-domain calibration outcomes are hardcoded;
 * only CALIBRATED domains enter the main table (a WEAK domain never does);
-* every detector row reconciles ``flagged == TP + FP + OTHER_FRAUD``;
+* every detector row reconciles ``flagged == TP + FP + unseen_caught``;
 * the ML normalisation uses the selection rows.
 """
 from __future__ import annotations
@@ -28,6 +28,7 @@ from fraud.hybrid import (  # noqa: E402
     add_normalised,
     candidate_names,
     ml_norm_stats,
+    render_readme_section,
     run,
     selection_rows,
 )
@@ -144,14 +145,14 @@ def test_detector_rows_reconcile(payload: dict) -> None:
             "RULES_ONLY", "ML_ONLY", "HYBRID",
         ]
         for row in domain["detectors"]:
-            assert row["flags"] == row["tp"] + row["fp"] + row["other_fraud"]
+            assert row["flags"] == row["tp"] + row["fp"] + row["unseen_caught"]
             assert row["evaluation_status"] == "in-sample"
             assert row["calibration_status"] == domain["calibration_status"]
             assert row["selection_rows_used"] == domain["selection_rows_used"]
         split = domain["hybrid_recall_split"]
         hybrid = next(r for r in domain["detectors"] if r["detector"] == "HYBRID")
         assert split["known_caught"] == hybrid["tp"]
-        assert split["unseen_caught"] == hybrid["other_fraud"]
+        assert split["unseen_caught"] == hybrid["unseen_caught"]
 
 
 def test_selection_set_has_no_room(payload: dict) -> None:
@@ -173,11 +174,20 @@ def test_unseen_recall_is_not_evaluable(payload: dict) -> None:
 
 
 def test_cross_rule_overlap_is_reported(payload: dict) -> None:
-    # Check 2: the aggregate OTHER_FRAUD is 0, but the rule cross-rule overlap is
-    # not. Both must be visible so the zero is not read as a filter artefact.
+    # Check 2: the aggregate unseen_caught is 0, but the rule cross-rule overlap
+    # is not. Both must be visible so the zero is not read as a filter artefact.
     domain = payload["domains"][0]
     rows = {r["detector"]: r for r in domain["detectors"]}
     assert rows["RULES_ONLY"]["cross_rule_overlap"] == 3
     assert rows["HYBRID"]["cross_rule_overlap"] == 3
-    assert rows["RULES_ONLY"]["other_fraud"] == 0
+    assert rows["RULES_ONLY"]["unseen_caught"] == 0
+    assert "other_fraud" not in rows["RULES_ONLY"]
     assert rows["HYBRID"].get("equals_detector") == "RULES_ONLY"
+
+
+def test_readme_section_is_generated_from_payload(payload: dict) -> None:
+    # The README section numbers must come from the report payload, not by hand.
+    section = render_readme_section(payload)
+    assert "{" not in section and "}" not in section
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    assert section in readme, "README.md is out of sync with reports/hybrid.json"

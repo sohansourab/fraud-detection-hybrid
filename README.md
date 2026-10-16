@@ -316,7 +316,17 @@ Contributions welcome! Areas of interest:
 
 ---
 
+## Hybrid detection (synthetic data, in-sample)
 
+HYBRID selected rule-only on MGNREGA Labor validation, the only domain that met the calibration criteria. The selection set had no room for a different outcome: on those 806 known-typology validation rows the rules had zero false positives and zero false negatives, so every candidate could match them at best and none could beat them. The selection therefore tells us only which candidates add false positives, not which combination is best.
+
+On the MGNREGA test split, HYBRID matches the rules exactly, with precision and recall of 1.000 and 1.000. Its ML component adds no detection on known typologies and catches 0 of 4 unseen events. Four events is too few to estimate recall, so that split is reported as not evaluable.
+
+The ML score's precision fell from 0.786 on validation to 0.476 on test. This instability is the main finding for the ML layer, not the HYBRID row. Civil Registry (WEAK: two validation flags) and PM-JAY (UNCALIBRATED: seven flags, three true positives, precision 0.429) are not calibrated and are excluded from the main table. A sensitivity run on PM-JAY with a different threshold gave two flags, both correct, which is too little evidence to use.
+
+All numbers are on synthetic labels. Unseen recall measures detection of injected patterns, not generalization. ML thresholds are per-domain and not comparable across domains.
+
+---
 
 ## ⚠️ Limitations
 
@@ -330,15 +340,14 @@ Contributions welcome! Areas of interest:
 - **ML layer is in-sample and per-domain.** The ML-only analysis
   (`reports/ml_only.md`, `python -m fraud.ml_only`) is scored on the synthetic
   labels at prevalence 0.02 only. ML thresholds are chosen per domain and are
-  **not comparable across domains**. The `HYBRID` detector is not implemented
-  yet (planned for P4c).
-- **PM-JAY's CALIBRATED status rests on injected patterns.** After P2e injected
-  the unseen typologies, PM-JAY's validation precision crossed the target, so it
-  now reads CALIBRATED. Those unseen patterns were written by the same simulator
-  that wrote the labels, so this measures detection of our injected patterns,
-  not generalization. The val split that chooses the threshold also contains 6
-  of them; without those rows val precision is 0.429, below the 0.5 target, so
-  the threshold is not selected on an independent split. PM-JAY stays in the
-  excluded block until P4c explains why it should count.
+  **not comparable across domains**. The `HYBRID` detector is implemented and
+  reported once on test (`reports/hybrid.md`, `python -m fraud.hybrid`); it
+  selected rule-only and does not beat the rules on known typologies (see
+  *Hybrid detection*, above).
+- **PM-JAY is not calibrated and stays excluded.** Its earlier CALIBRATED label
+  rested on unseen val rows that leaked into the threshold split. P4c excludes
+  those rows from selection: without them PM-JAY's validation precision is
+  0.429, below the 0.5 target, so it reads UNCALIBRATED and is excluded from the
+  HYBRID main table (see *Hybrid detection*, above).
 
 **⚠️ Disclaimer:** This is a demonstration system using synthetic data. For production use, integrate with actual government databases and legal frameworks.

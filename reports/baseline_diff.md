@@ -471,6 +471,12 @@ Two checks run after the first P4c report, both now encoded in the report.
   0.786 (val) to 0.476 (test), a drop of 0.310; F1 0.595 -> 0.465. The ML score
   is unstable across splits, which is why the only calibrated domain's ML signal
   does not support a HYBRID that beats rules.
+- **Rename - `other_fraud` -> `unseen_caught` (report + code + tests).** The
+  aggregate bucket counts flagged *unseen* fraud, whereas `OTHER_FRAUD` in
+  `metrics.md` / `evaluate.py` is the cross-rule overlap. Two definitions under
+  one name would mislead a reader who sees both. The aggregate column is now
+  `unseen_caught`; `evaluate.py`'s cross-rule overlap is kept as the separate
+  `cross_rule_overlap` diagnostic. `metrics.md` and `evaluate.py` are unchanged.
 
 ## Summary
 

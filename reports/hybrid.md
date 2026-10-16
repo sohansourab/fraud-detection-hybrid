@@ -2,7 +2,7 @@
 
 > **Caveat.** HYBRID combination is selected on validation rows excluding unseen typologies, then reported once on test. All numbers are on synthetic labels; unseen recall measures detection of injected patterns, not generalization. Only CALIBRATED domains are reported in the main table.
 
-`TP` = known (rule-injected) fraud caught; `OTHER_FRAUD` = flagged fraud with no rule injection (the unseen typologies); `FP` = flagged `is_fraud=0`. Precision is `TP / (TP + FP)`; recall is `TP / (TP + FN)` over known fraud. Unseen recall is reported separately. `cross-rule overlap` is a separate rule diagnostic (`evaluate.py`'s OTHER_FRAUD): flagged records injected for a *different* rule. It is not the aggregate `OTHER_FRAUD` column.
+`TP` = known (rule-injected) fraud caught; `unseen_caught` = flagged fraud with no rule injection (the unseen typologies); `FP` = flagged `is_fraud=0`. Precision is `TP / (TP + FP)`; recall is `TP / (TP + FN)` over known fraud. Unseen recall is reported separately. `cross-rule overlap` is a separate rule diagnostic (`evaluate.py`'s `OTHER_FRAUD`, a different definition): flagged records injected for a *different* rule. The aggregate column is named `unseen_caught`, not `OTHER_FRAUD`, so the two are never confused.
 
 ## Selection (validation rows, unseen excluded)
 
@@ -23,7 +23,7 @@
 
 ## Test (reported once, including unseen rows)
 
-| domain | detector | flags | TP | FP | OTHER_FRAUD | FN | cross-rule overlap | precision | recall | F1 |
+| domain | detector | flags | TP | FP | unseen_caught | FN | cross-rule overlap | precision | recall | F1 |
 |---|---|---|---|---|---|---|---|---|---|---|
 | MGNREGA Labor | HYBRID = rules-only (selected) | 22 | 22 | 0 | 0 | 0 | 3 | 1.000 | 1.000 | 1.000 |
 | MGNREGA Labor | ML_ONLY | 21 | 10 | 11 | 0 | 12 | 3 | 0.476 | 0.455 | 0.465 |

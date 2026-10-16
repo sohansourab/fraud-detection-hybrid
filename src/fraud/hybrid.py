@@ -7,12 +7,17 @@ combination rule - see the "Threshold-selection leakage" section of
 ``reports/ml_only.md``). The selected combination is then applied **once** to the
 test split and reported there.
 
-Metric buckets match :mod:`fraud.evaluate`:
+Metric buckets follow :mod:`fraud.evaluate`, but the aggregate bucket is named
+``unseen_caught`` (not ``other_fraud``) so it is never confused with
+``evaluate.py``'s per-rule ``OTHER_FRAUD`` (the cross-rule overlap):
 
 * ``tp`` - flagged ``is_fraud=1`` record injected with a rule (a known typology);
-* ``other_fraud`` - flagged ``is_fraud=1`` record with no rule injection
+* ``unseen_caught`` - flagged ``is_fraud=1`` record with no rule injection
   (the unseen typologies): real fraud, but not the typology a rule targets;
 * ``fp`` - flagged ``is_fraud=0`` record.
+
+``cross_rule_overlap`` is kept as a separate rule diagnostic: a flagged fraud
+record injected for a *different* rule (``evaluate.py``'s ``OTHER_FRAUD``).
 
 Precision is ``TP / (TP + FP)``; recall is ``TP / (TP + FN)`` with the recall
 denominator the known (rule-injected) fraud. The unseen typologies are reported
@@ -131,7 +136,7 @@ def _cross_overlap(
 
     This is :mod:`fraud.evaluate`'s ``OTHER_FRAUD`` (cross-rule overlap). It is a
     property of the rule flags, so it is *not* the aggregate detector's
-    ``other_fraud`` bucket (which counts flagged unseen fraud).
+    ``unseen_caught`` bucket (which counts flagged unseen fraud).
     """
     flagged_by: dict[str, set[str]] = {}
     for rule_id, records in rule_flags.items():
@@ -225,7 +230,7 @@ def detector_metrics(flag: pd.Series, frame: pd.DataFrame) -> dict[str, Any]:
     flagged = int(flag.sum())
     if flagged != tp + other + fp:
         raise HybridError(
-            f"flagged={flagged} != TP+FP+OTHER_FRAUD={tp + other + fp}"
+            f"flagged={flagged} != TP+FP+unseen_caught={tp + other + fp}"
         )
     precision, recall, f1 = _prf(tp, fp, fn)
     known_total = int(known.sum())
@@ -238,7 +243,7 @@ def detector_metrics(flag: pd.Series, frame: pd.DataFrame) -> dict[str, Any]:
         "flags": flagged,
         "tp": tp,
         "fp": fp,
-        "other_fraud": other,
+        "unseen_caught": other,
         "fn": fn,
         "precision": precision,
         "recall": recall,
@@ -248,7 +253,7 @@ def detector_metrics(flag: pd.Series, frame: pd.DataFrame) -> dict[str, Any]:
         "known_recall": (tp / (tp + fn)) if (tp + fn) else None,
         "unseen_recall": (other / unseen_total) if unseen_total else None,
         # Cross-rule overlap (fraud.evaluate's OTHER_FRAUD notion): rule flags on
-        # records injected for a different rule. Distinct from ``other_fraud``.
+        # records injected for a different rule. Distinct from ``unseen_caught``.
         "cross_rule_overlap": cross,
     }
 
@@ -438,7 +443,7 @@ def run(write: bool = True) -> dict[str, Any]:
                 "known_caught": hybrid["tp"],
                 "known_fraud": hybrid["known_fraud"],
                 "known_recall": hybrid["known_recall"],
-                "unseen_caught": hybrid["other_fraud"],
+                "unseen_caught": hybrid["unseen_caught"],
                 "unseen_fraud": unseen_fraud,
                 "unseen_recall": hybrid["unseen_recall"],
                 "unseen_evaluation_status": (
@@ -562,7 +567,7 @@ def _selection_lines(payload: dict[str, Any]) -> list[str]:
 
 def _test_table(domains: list[dict[str, Any]]) -> list[str]:
     lines = [
-        "| domain | detector | flags | TP | FP | OTHER_FRAUD | FN | cross-rule "
+        "| domain | detector | flags | TP | FP | unseen_caught | FN | cross-rule "
         "overlap | precision | recall | F1 |",
         "|---|---|---|---|---|---|---|---|---|---|---|",
     ]
@@ -577,7 +582,7 @@ def _test_table(domains: list[dict[str, Any]]) -> list[str]:
                 label = "HYBRID = rules-only (selected)"
             lines.append(
                 f"| {domain['domain']} | {label} | {row['flags']} "
-                f"| {row['tp']} | {row['fp']} | {row['other_fraud']} "
+                f"| {row['tp']} | {row['fp']} | {row['unseen_caught']} "
                 f"| {row['fn']} | {row['cross_rule_overlap']} "
                 f"| {_fmt(row['precision'])} "
                 f"| {_fmt(row['recall'])} | {_fmt(row['f1'])} |"
@@ -646,13 +651,14 @@ def render_markdown(payload: dict[str, Any]) -> str:
         "",
         f"> **Caveat.** {payload['caveat']}",
         "",
-        "`TP` = known (rule-injected) fraud caught; `OTHER_FRAUD` = flagged fraud "
-        "with no rule injection (the unseen typologies); `FP` = flagged "
+        "`TP` = known (rule-injected) fraud caught; `unseen_caught` = flagged "
+        "fraud with no rule injection (the unseen typologies); `FP` = flagged "
         "`is_fraud=0`. Precision is `TP / (TP + FP)`; recall is `TP / (TP + FN)` "
         "over known fraud. Unseen recall is reported separately. `cross-rule "
-        "overlap` is a separate rule diagnostic (`evaluate.py`'s OTHER_FRAUD): "
-        "flagged records injected for a *different* rule. It is not the "
-        "aggregate `OTHER_FRAUD` column.",
+        "overlap` is a separate rule diagnostic (`evaluate.py`'s `OTHER_FRAUD`, "
+        "a different definition): flagged records injected for a *different* "
+        "rule. The aggregate column is named `unseen_caught`, not `OTHER_FRAUD`, "
+        "so the two are never confused.",
         "",
     ]
     lines.extend(_selection_lines(payload))
@@ -733,10 +739,54 @@ def render_markdown(payload: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+#: README section, filled from the report payload so the numbers cannot drift
+#: from ``reports/hybrid.json``. Only the ``{...}`` fields are substituted.
+README_SECTION_TEMPLATE = """## Hybrid detection (synthetic data, in-sample)
+
+HYBRID selected rule-only on MGNREGA Labor validation, the only domain that met the calibration criteria. The selection set had no room for a different outcome: on those 806 known-typology validation rows the rules had zero false positives and zero false negatives, so every candidate could match them at best and none could beat them. The selection therefore tells us only which candidates add false positives, not which combination is best.
+
+On the MGNREGA test split, HYBRID matches the rules exactly, with precision and recall of {hybrid_test_precision} and {hybrid_test_recall}. Its ML component adds no detection on known typologies and catches {unseen_caught} of {unseen_events} unseen events. Four events is too few to estimate recall, so that split is reported as not evaluable.
+
+The ML score's precision fell from {ml_val_precision} on validation to {ml_test_precision} on test. This instability is the main finding for the ML layer, not the HYBRID row. Civil Registry (WEAK: two validation flags) and PM-JAY (UNCALIBRATED: seven flags, three true positives, precision 0.429) are not calibrated and are excluded from the main table. A sensitivity run on PM-JAY with a different threshold gave two flags, both correct, which is too little evidence to use.
+
+All numbers are on synthetic labels. Unseen recall measures detection of injected patterns, not generalization. ML thresholds are per-domain and not comparable across domains.
+"""
+
+
+def render_readme_section(payload: dict[str, Any]) -> str:
+    """Render the README section, substituting values from ``payload``.
+
+    The substituted fields are exactly the placeholders in the template; every
+    number comes from the generated report, not from this file by hand.
+    """
+    if not payload["domains"]:
+        raise HybridError("no CALIBRATED domain: cannot render the README section")
+    domain = payload["domains"][0]
+    hybrid = next(r for r in domain["detectors"] if r["detector"] == "HYBRID")
+    split = domain["hybrid_recall_split"]
+    gap = domain["ml_val_to_test_gap"]
+    return README_SECTION_TEMPLATE.format(
+        hybrid_test_precision=_fmt(hybrid["precision"]),
+        hybrid_test_recall=_fmt(hybrid["recall"]),
+        unseen_caught=split["unseen_caught"],
+        unseen_events=split["unseen_fraud"],
+        ml_val_precision=_fmt(gap["val"]["precision"]),
+        ml_test_precision=_fmt(gap["test"]["precision"]),
+    )
+
+
 def main(argv: list[str] | None = None) -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     parser = argparse.ArgumentParser(description="HYBRID combination report (P4c).")
-    parser.parse_args(argv)
+    parser.add_argument(
+        "--readme",
+        action="store_true",
+        help="print the README section (numbers from the report payload) and exit",
+    )
+    args = parser.parse_args(argv)
+    if args.readme:
+        print(render_readme_section(run(write=False)))
+        return
     run()
 
 
