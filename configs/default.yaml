@@ -1,0 +1,115 @@
+# Central configuration for the hybrid fraud detection pipeline.
+# Every threshold, file path and seed used by the scanner lives here.
+seed: 42
+
+paths:
+  beneficiaries: data/beneficiaries.csv
+  mgnrega: data/transactions_mgnrega.csv
+  pmjay: data/transactions_pmjay.csv
+  output: output/reports/fraud_report.json
+
+civil_registry:
+  dummy_mobile: "9999999999"
+  min_adult_age: 18
+  max_normal_age: 100
+  max_family_size: 15
+  max_mobile_sharing: 3
+
+mgnrega:
+  max_days_per_cycle: 15
+  ghost_project_suffix: "_000"
+  cartel_threshold: 0.80
+  min_cartel_appearances: 3
+
+pmjay:
+  max_general_ward_cost: 50000
+  blacklisted_hospital: "HOSP_999"
+  female_only_procedures:
+    - Hysterectomy
+  general_procedures:
+    - General Ward
+    - General Consultation
+  procedure_mill_threshold: 50
+
+cross_domain:
+  min_domains: 2
+  beneficiary_prefix: "BEN_"
+
+risk_bands:
+  low_max: 25
+  medium_max: 50
+  high_max: 75
+
+# Synthetic data simulator injections (module P2a; prevalence scaling in P2b).
+# These let the currently-inert rules fire and add Rule 013 hard negatives.
+simulator:
+  # Target fraction of *fraud* records (is_fraud=1) among all scannable
+  # records. The simulator scales the per-rule injection volumes so the
+  # realised rate lands near this value instead of the much higher hard-coded
+  # per-rule rates.
+  prevalence: 0.02
+  # Rule 017 (cartel): N groups of workers who co-occur in every muster roll.
+  cartel_groups: 15
+  cartel_group_min_size: 4
+  cartel_group_max_size: 6
+  # Each cartel member appears in this many muster rolls (must exceed
+  # mgnrega.min_cartel_appearances = 3 so the rule's appearances gate passes).
+  cartel_muster_rolls: 6
+  # Rule 021 (procedure mill): groups of same (hospital, procedure, month).
+  # Volumes are scaled by prevalence but floored so one group still clears
+  # pmjay.procedure_mill_threshold = 50.
+  procedure_mill_groups: 1
+  procedure_mill_group_size: 60
+  # Rule 013 hard negatives: fraction of beneficiaries with null/blank mobile.
+  # Hard negatives are not fraud, so this is not scaled by prevalence.
+  blank_mobile_rate: 0.02
+  # Minimum injected events per fraud type (module P2c). After prevalence
+  # scaling, any type below this floor is raised to it, unless doing so would
+  # push total fraud above 1.5 x prevalence x scannable records.
+  min_events_per_type: 10
+  # Dedicated cross-scheme injection for Rule 025 (module P2c; resized in P2d):
+  # N beneficiaries each present (and flagged) in 2-3 schemes, so Rule 025 has
+  # a real basis. A fixed count (not prevalence-driven) kept at >= the
+  # min_events_per_type floor without dominating the fraud mix.
+  cross_scheme:
+    beneficiaries: 12
+    combos:
+      - ["Civil Registry", "MGNREGA Labor"]
+      - ["MGNREGA Labor", "PM-JAY Medical"]
+      - ["Civil Registry", "PM-JAY Medical"]
+  # Unseen typologies (module P2e): patterns with *no* matching rule, injected
+  # to measure what the current detectors miss. Appended with a separate RNG
+  # stream after the min-events floor, so existing per-type counts are
+  # unchanged. `enabled: false` skips all three. Counts are events at 0.02
+  # prevalence; each is labelled fraud_type=unseen_* with an empty rule id.
+  unseen:
+    enabled: true
+    # MGNREGA: payments kept just below the per-transaction approval limit.
+    just_under_limit:
+      count: 12
+      approval_limit: 3500
+      fraction_min: 0.95
+      fraction_max: 0.99
+    # PM-JAY: a cluster of weekend claims at one hospital within one month.
+    weekend_cluster:
+      count: 14
+      hospital_id: "HOSP_UNSEEN_WKND"
+      month: "2024-07"
+      max_weekends: 4
+    # PM-JAY: one hospital whose claim amounts rise ~3%/month over 12 months.
+    growing_amounts:
+      count: 13
+      hospital_id: "HOSP_UNSEEN_GROW"
+      months: 12
+      base_amount: 30000
+      monthly_growth: 0.03
+
+# HYBRID combination (module P4c). The combination is selected on validation
+# rows that exclude the unseen typologies, then applied once on test. Both
+# inputs are normalised to [0, 1], so `decision_threshold` (0.5) is the natural
+# cut for the continuous combinations. `severity_max` is the largest rule
+# severity (RULE_025 = 40).
+hybrid:
+  decision_threshold: 0.5
+  weights: [0.3, 0.5, 0.7]
+  severity_max: 40

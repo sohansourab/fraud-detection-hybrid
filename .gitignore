@@ -13,3 +13,15 @@ output/
 *.csv
 *.pdf
 *.json
+
+# Keep the committed regression snapshot under tests/
+!tests/baseline/*.json
+
+# Keep the generated evaluation metrics (the source of truth for docs)
+!reports/metrics.json
+# Keep the ML-only analysis result (source of truth for the P4b numbers)
+!reports/ml_only.json
+# Keep the HYBRID analysis result (source of truth for the P4c numbers)
+!reports/hybrid.json
+# Keep the agent-layer metrics (the source linked from the README)
+!reports/agent_metrics.json

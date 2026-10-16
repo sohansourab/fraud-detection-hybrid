@@ -5,7 +5,13 @@ charset-normalizer==3.4.4
 Faker==38.2.0
 fpdf==1.7.2
 google-ai-generativelanguage==0.6.15
-google-api-core==2.28.1
+# google-api-core is pinned to 2.25.0, the last release without the
+# `grpcio-status>=1.75.1; python_version >= "3.14"` marker. That marker pulls
+# protobuf>=6, which conflicts with google-ai-generativelanguage's protobuf<6,
+# making requirements.txt unresolvable on Python 3.14. Nothing in this repo
+# imports the google stack; it is kept pinned so `pip install -r` works on
+# 3.11-3.14.
+google-api-core==2.25.0
 google-api-python-client==2.187.0
 google-auth==2.43.0
 google-auth-httplib2==0.2.1
@@ -37,3 +43,12 @@ typing_extensions==4.15.0
 tzdata==2025.2
 uritemplate==4.2.0
 urllib3==2.6.2
+PyYAML
+pytest
+fastapi==0.143.2
+uvicorn==0.54.0
+# httpx 0.28 is pinned: fastapi/starlette's TestClient emits a harmless
+# StarletteDeprecationWarning ("install httpx2 instead") on import.
+httpx==0.28.1
+streamlit==1.66.0
+ruff==0.17.1

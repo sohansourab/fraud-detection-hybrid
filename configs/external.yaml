@@ -1,0 +1,28 @@
+# Real-data track configuration (module R1: IEEE-CIS loader).
+#
+# Kept separate from configs/default.yaml on purpose: default.yaml holds the
+# frozen synthetic pipeline settings and must not be touched by the real-data
+# track. Only src/fraud/external/ieee_cis.py reads this file.
+ieee_cis:
+  # Folder holding the Kaggle IEEE-CIS CSVs. The loader also accepts the
+  # "extra directory level" layout some unzip tools produce, i.e.
+  # <data_dir>/train_transaction.csv/train_transaction.csv.
+  data_dir: data/external/ieee-cis
+  transaction_file: train_transaction.csv
+  identity_file: train_identity.csv
+  # Written to <data_dir>/; parquet when pyarrow is installed, else CSV.
+  processed_file: processed.parquet
+  # A column whose null fraction is strictly greater than this is dropped
+  # (and reported). Kept columns with any nulls get a <col>_missing flag plus
+  # an imputed value.
+  null_drop_threshold: 0.90
+  # Sentinel written into text columns before a missing flag is added.
+  # Numeric columns are imputed with the median over TRAIN rows only.
+  missing_sentinel: "__missing__"
+  # Quantile cut points on TransactionDT (seconds offset, not a calendar date):
+  #   train: DT <= val_start_quantile
+  #   val:   val_start_quantile < DT <= test_start_quantile
+  #   test:  DT > test_start_quantile
+  # 0.60 / 0.80 give train 60%, val 20%, test 20% (test = last 20% of time).
+  val_start_quantile: 0.60
+  test_start_quantile: 0.80

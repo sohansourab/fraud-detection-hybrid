@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# NOTE (P4a): this logic now lives in src/fraud/ml.py (record-level scoring,
+# two bug fixes, config-driven). This file is kept unchanged for reference.
 """
 ML-Based Anomaly Detection Layer (Hybrid Approach)
 Complements the deterministic rule-based scanner with statistical outlier detection.

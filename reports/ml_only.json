@@ -1,0 +1,341 @@
+{
+  "generated_by": "fraud.ml_only",
+  "caveat": "Scores are on synthetic labels. The UNSEEN patterns were injected by the same simulator that generated the labels, so UNSEEN recall measures detection of our injected patterns, not generalization. ML thresholds are per-domain and not comparable across domains. A WEAK domain's numbers are not a calibrated result.",
+  "precision_target": 0.5,
+  "min_events_per_type": 10,
+  "min_val_flags_for_calibration": 10,
+  "min_val_tp_for_calibration": 3,
+  "levels": {
+    "0.02": {
+      "evaluation_status": "in-sample",
+      "domains": [
+        {
+          "domain": "Civil Registry",
+          "calibration_status": "WEAK",
+          "evaluation_status": "in-sample",
+          "ml_flags": 36,
+          "rule_flags": 64,
+          "ml_only_flags": 19,
+          "ml_only_caught": 0,
+          "ml_only_caught_known": 0,
+          "ml_only_caught_unseen": 0,
+          "unseen_by_type": [
+            {
+              "fraud_type": "unseen_just_under_limit",
+              "events": 0,
+              "ml_only_caught": 0,
+              "evaluation_status": "no unseen events injected",
+              "recall_note": "no unseen events injected for this domain",
+              "calibration_status": "WEAK"
+            },
+            {
+              "fraud_type": "unseen_weekend_cluster",
+              "events": 0,
+              "ml_only_caught": 0,
+              "evaluation_status": "no unseen events injected",
+              "recall_note": "no unseen events injected for this domain",
+              "calibration_status": "WEAK"
+            },
+            {
+              "fraud_type": "unseen_growing_amounts",
+              "events": 0,
+              "ml_only_caught": 0,
+              "evaluation_status": "no unseen events injected",
+              "recall_note": "no unseen events injected for this domain",
+              "calibration_status": "WEAK"
+            }
+          ],
+          "leakage": {
+            "val_unseen": 0,
+            "val_unseen_flagged": 0,
+            "val_flags_excl_unseen": 2,
+            "val_tp_excl_unseen": 1,
+            "val_precision_excl_unseen": 0.5,
+            "leaks": false
+          },
+          "val": {
+            "n": 322,
+            "fraud": 10,
+            "flags": 2,
+            "tp": 1,
+            "precision": 0.5,
+            "recall": 0.1
+          },
+          "test": {
+            "n": 402,
+            "fraud": 11,
+            "flags": 7,
+            "tp": 3,
+            "precision": 0.42857142857142855,
+            "recall": 0.2727272727272727
+          },
+          "by_fraud_type": [
+            {
+              "fraud_type": "cross_scheme",
+              "events": 8,
+              "ml_only_caught": 0,
+              "evaluation_status": "not evaluable"
+            },
+            {
+              "fraud_type": "invalid_mobile",
+              "events": 10,
+              "ml_only_caught": 0,
+              "evaluation_status": "in-sample"
+            },
+            {
+              "fraud_type": "mega_family",
+              "events": 16,
+              "ml_only_caught": 0,
+              "evaluation_status": "in-sample"
+            },
+            {
+              "fraud_type": "mobile_sharing",
+              "events": 10,
+              "ml_only_caught": 0,
+              "evaluation_status": "in-sample"
+            },
+            {
+              "fraud_type": "suspicious_age",
+              "events": 10,
+              "ml_only_caught": 0,
+              "evaluation_status": "in-sample"
+            },
+            {
+              "fraud_type": "underage_jobcard",
+              "events": 10,
+              "ml_only_caught": 0,
+              "evaluation_status": "in-sample"
+            }
+          ]
+        },
+        {
+          "domain": "MGNREGA Labor",
+          "calibration_status": "CALIBRATED",
+          "evaluation_status": "in-sample",
+          "ml_flags": 105,
+          "rule_flags": 144,
+          "ml_only_flags": 40,
+          "ml_only_caught": 1,
+          "ml_only_caught_known": 0,
+          "ml_only_caught_unseen": 1,
+          "unseen_by_type": [
+            {
+              "fraud_type": "unseen_just_under_limit",
+              "events": 12,
+              "ml_only_caught": 1,
+              "evaluation_status": "in-sample",
+              "recall_note": "1 of 12, not evaluable as a recall estimate",
+              "calibration_status": "CALIBRATED"
+            },
+            {
+              "fraud_type": "unseen_weekend_cluster",
+              "events": 0,
+              "ml_only_caught": 0,
+              "evaluation_status": "no unseen events injected",
+              "recall_note": "no unseen events injected for this domain",
+              "calibration_status": "CALIBRATED"
+            },
+            {
+              "fraud_type": "unseen_growing_amounts",
+              "events": 0,
+              "ml_only_caught": 0,
+              "evaluation_status": "no unseen events injected",
+              "recall_note": "no unseen events injected for this domain",
+              "calibration_status": "CALIBRATED"
+            }
+          ],
+          "leakage": {
+            "val_unseen": 3,
+            "val_unseen_flagged": 0,
+            "val_flags_excl_unseen": 14,
+            "val_tp_excl_unseen": 11,
+            "val_precision_excl_unseen": 0.7857142857142857,
+            "leaks": true
+          },
+          "val": {
+            "n": 809,
+            "fraud": 26,
+            "flags": 14,
+            "tp": 11,
+            "precision": 0.7857142857142857,
+            "recall": 0.4230769230769231
+          },
+          "test": {
+            "n": 1013,
+            "fraud": 26,
+            "flags": 21,
+            "tp": 10,
+            "precision": 0.47619047619047616,
+            "recall": 0.38461538461538464
+          },
+          "by_fraud_type": [
+            {
+              "fraud_type": "cross_scheme",
+              "events": 8,
+              "ml_only_caught": 0,
+              "evaluation_status": "not evaluable"
+            },
+            {
+              "fraud_type": "free_money",
+              "events": 16,
+              "ml_only_caught": 0,
+              "evaluation_status": "in-sample"
+            },
+            {
+              "fraud_type": "ghost_project",
+              "events": 23,
+              "ml_only_caught": 0,
+              "evaluation_status": "in-sample"
+            },
+            {
+              "fraud_type": "impossible_human",
+              "events": 29,
+              "ml_only_caught": 0,
+              "evaluation_status": "in-sample"
+            },
+            {
+              "fraud_type": "muster_cartel",
+              "events": 36,
+              "ml_only_caught": 0,
+              "evaluation_status": "in-sample"
+            },
+            {
+              "fraud_type": "unseen_just_under_limit",
+              "events": 12,
+              "ml_only_caught": 1,
+              "evaluation_status": "in-sample"
+            },
+            {
+              "fraud_type": "wage_theft",
+              "events": 34,
+              "ml_only_caught": 0,
+              "evaluation_status": "in-sample"
+            }
+          ]
+        }
+      ],
+      "excluded": [
+        {
+          "domain": "PM-JAY Medical",
+          "calibration_status": "CALIBRATED",
+          "evaluation_status": "in-sample",
+          "ml_flags": 81,
+          "rule_flags": 100,
+          "ml_only_flags": 63,
+          "ml_only_caught": 27,
+          "ml_only_caught_known": 0,
+          "ml_only_caught_unseen": 27,
+          "unseen_by_type": [
+            {
+              "fraud_type": "unseen_just_under_limit",
+              "events": 0,
+              "ml_only_caught": 0,
+              "evaluation_status": "no unseen events injected",
+              "recall_note": "no unseen events injected for this domain",
+              "calibration_status": "CALIBRATED"
+            },
+            {
+              "fraud_type": "unseen_weekend_cluster",
+              "events": 14,
+              "ml_only_caught": 14,
+              "evaluation_status": "in-sample",
+              "recall_note": "14 of 14, in-sample (injected patterns; not a generalization estimate)",
+              "calibration_status": "CALIBRATED"
+            },
+            {
+              "fraud_type": "unseen_growing_amounts",
+              "events": 13,
+              "ml_only_caught": 13,
+              "evaluation_status": "in-sample",
+              "recall_note": "13 of 13, in-sample (injected patterns; not a generalization estimate)",
+              "calibration_status": "CALIBRATED"
+            }
+          ],
+          "leakage": {
+            "val_unseen": 6,
+            "val_unseen_flagged": 6,
+            "val_flags_excl_unseen": 7,
+            "val_tp_excl_unseen": 3,
+            "val_precision_excl_unseen": 0.42857142857142855,
+            "leaks": true
+          },
+          "val": {
+            "n": 500,
+            "fraud": 20,
+            "flags": 13,
+            "tp": 9,
+            "precision": 0.6923076923076923,
+            "recall": 0.45
+          },
+          "test": {
+            "n": 587,
+            "fraud": 25,
+            "flags": 16,
+            "tp": 10,
+            "precision": 0.625,
+            "recall": 0.4
+          },
+          "by_fraud_type": [
+            {
+              "fraud_type": "bio_mismatch",
+              "events": 10,
+              "ml_only_caught": 0,
+              "evaluation_status": "in-sample"
+            },
+            {
+              "fraud_type": "blacklisted_hospital",
+              "events": 10,
+              "ml_only_caught": 0,
+              "evaluation_status": "in-sample"
+            },
+            {
+              "fraud_type": "cross_scheme",
+              "events": 8,
+              "ml_only_caught": 0,
+              "evaluation_status": "not evaluable"
+            },
+            {
+              "fraud_type": "massive_upcoding",
+              "events": 11,
+              "ml_only_caught": 0,
+              "evaluation_status": "in-sample"
+            },
+            {
+              "fraud_type": "procedure_mill",
+              "events": 51,
+              "ml_only_caught": 0,
+              "evaluation_status": "in-sample"
+            },
+            {
+              "fraud_type": "time_travel",
+              "events": 10,
+              "ml_only_caught": 0,
+              "evaluation_status": "in-sample"
+            },
+            {
+              "fraud_type": "unseen_growing_amounts",
+              "events": 13,
+              "ml_only_caught": 13,
+              "evaluation_status": "in-sample"
+            },
+            {
+              "fraud_type": "unseen_weekend_cluster",
+              "events": 14,
+              "ml_only_caught": 14,
+              "evaluation_status": "in-sample"
+            }
+          ],
+          "note": "excluded: calibration rests on injected (unseen) patterns; see P4c"
+        }
+      ]
+    },
+    "0.05": {
+      "evaluation_status": "not evaluable",
+      "reason": "no ML scores at this prevalence (P4a wrote 0.02 only; the raw features and record sets differ, so re-scoring would need new per-level thresholds, which P4b must not add)"
+    },
+    "0.10": {
+      "evaluation_status": "not evaluable",
+      "reason": "no ML scores at this prevalence (P4a wrote 0.02 only; the raw features and record sets differ, so re-scoring would need new per-level thresholds, which P4b must not add)"
+    }
+  }
+}
