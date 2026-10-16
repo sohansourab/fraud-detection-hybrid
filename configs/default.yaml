@@ -103,3 +103,13 @@ simulator:
       months: 12
       base_amount: 30000
       monthly_growth: 0.03
+
+# HYBRID combination (module P4c). The combination is selected on validation
+# rows that exclude the unseen typologies, then applied once on test. Both
+# inputs are normalised to [0, 1], so `decision_threshold` (0.5) is the natural
+# cut for the continuous combinations. `severity_max` is the largest rule
+# severity (RULE_025 = 40).
+hybrid:
+  decision_threshold: 0.5
+  weights: [0.3, 0.5, 0.7]
+  severity_max: 40

@@ -400,6 +400,49 @@ typologies whose UNSEEN recall is reported helped pick the operating point.
   now also pins the Civil "no unseen events injected" wording and the MGNREGA
   "1 of 12, not evaluable as a recall estimate" note).
 
+## P4c - HYBRID with unseen excluded from selection
+
+The HYBRID combination is selected on validation rows with the unseen typologies
+excluded (module P4c), then reported **once** on test. No feature, ML threshold,
+rule, simulator or `evaluate` metric definition changed; a new `hybrid` section
+was added to `configs/default.yaml` and a `HybridConfig` to `src/fraud/config.py`.
+
+- Selection set = val rows whose `fraud_type` has no `unseen_*` token. Rows per
+  domain: Civil 322, MGNREGA 806, PM-JAY 494.
+- **Calibration expectations changed** (committed thresholds; unseen excluded):
+
+  | domain | P4b-rerun | P4c | val flags | val TP | val precision |
+  |---|---|---|---|---|---|
+  | Civil Registry | WEAK | WEAK | 2 | 1 | 0.500 |
+  | MGNREGA Labor | CALIBRATED | CALIBRATED | 14 | 11 | 0.786 |
+  | PM-JAY Medical | CALIBRATED | **UNCALIBRATED** | 7 | 3 | 0.429 |
+
+  PM-JAY drops from CALIBRATED to UNCALIBRATED once the 6 leaked unseen val rows
+  are removed from the metrics: the P4b-rerun label rested on them (see the
+  leakage section above). This matches the pre-P2e outcome.
+- Sensitivity (not selected): recomputing PM-JAY's threshold on the selection
+  rows gives 0.6329 -> 2 flags, 2 TP, precision 1.000 -> WEAK. Reported only as
+  a variant; the committed threshold is kept.
+- Combination selection (val F1 on the CALIBRATED domain, MGNREGA, 806 rows):
+  rule_only 1.000, `max` 0.676, weighted w0.3 0.667, w0.5 0.757, w0.7 0.978,
+  rule_first 0.939. **No candidate beat the rule-only baseline**, so the
+  selected combination is `rule_only` (a HYBRID that does not beat rules on
+  known typologies is not reported as an improvement).
+- Test, MGNREGA (reported once, including unseen): RULES_ONLY 22 TP / 0 FP /
+  0 OTHER / 0 FN (P 1.000, R 1.000, F1 1.000); ML_ONLY 10 / 11 / 0 / 12
+  (P 0.476, R 0.455, F1 0.465); HYBRID = rule_only. HYBRID known vs unseen
+  recall on test: known 22 / 22 (1.000), unseen 0 / 4 (0.000).
+- Routing (enforced in code): only CALIBRATED domains enter the main table;
+  WEAK and UNCALIBRATED go to the excluded block with their val counts. Civil
+  (WEAK) and PM-JAY (UNCALIBRATED) are excluded.
+- Reported (not hand-typed) in `reports/hybrid.md` / `reports/hybrid.json`.
+- Regression tests: `tests/test_hybrid.py`
+  (`test_selection_rows_drop_unseen_val_rows`,
+  `test_select_combination_refuses_test_rows`,
+  `test_calibration_expectations`,
+  `test_only_calibrated_domains_in_main_table`,
+  `test_detector_rows_reconcile`, ...).
+
 ## Summary
 
 P1d/P1e changed only Rule 025:

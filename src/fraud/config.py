@@ -217,6 +217,22 @@ class MLConfig:
 
 
 @dataclass(frozen=True)
+class HybridConfig:
+    """HYBRID combination settings (module P4c).
+
+    The combination is selected on validation rows that exclude the unseen
+    typologies, then applied once on test. ``decision_threshold`` turns the
+    normalised ``max`` / weighted-sum scores into a flag; both inputs are in
+    ``[0, 1]``, so the midpoint is the natural cut. ``severity_max`` is the
+    largest rule severity (RULE_025 = 40) used to normalise rule severity.
+    """
+
+    decision_threshold: float = 0.5
+    weights: list[float] = field(default_factory=lambda: [0.3, 0.5, 0.7])
+    severity_max: int = 40
+
+
+@dataclass(frozen=True)
 class Config:
     """Root configuration object."""
 
@@ -229,6 +245,7 @@ class Config:
     risk_bands: RiskBandsConfig = field(default_factory=RiskBandsConfig)
     simulator: SimulatorConfig = field(default_factory=SimulatorConfig)
     ml: MLConfig = field(default_factory=MLConfig)
+    hybrid: HybridConfig = field(default_factory=HybridConfig)
 
 
 def _build(cls: type, data: Any) -> Any:
