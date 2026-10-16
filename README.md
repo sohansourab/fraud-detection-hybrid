@@ -254,31 +254,55 @@ files and compute nothing.
 
 ## Agent layer
 
-The agent layer adds a per-case investigator on top of the rule flags. It reads
-only the scanner's input tables and the rule registry; the ground-truth labels
-are never loaded and never handed to the model. For one flagged record it runs a
-small, capped set of read-only tools (`get_record`, `get_neighbors`,
-`explain_rule`, `run_rule`) and drafts a review note.
+The agent layer adds a per-case investigator on top of the rule flags, where the
+model may call four read-only tools (`get_record`, `get_neighbors`,
+`explain_rule`, `run_rule`). A drafter then writes a short review note whose
+factual sentences cite evidence ids, and a deterministic verifier checks only
+that each citation exists and that every number in a sentence appears in the
+text of the cited evidence.
 
-The verifier is deterministic. Every factual sentence must carry an evidence id
-(`[E#]`), and every number in a sentence must appear in the text of the cited
-evidence. A draft that fails gets at most two revisions from the drafter; if it
-still fails, the case is marked `needs_human`. Drafts say "flagged for review"
-and avoid loaded words.
+Offline, the deterministic template drafter produced **0 unsupported sentences
+out of 120** first-draft sentences (rate 0.0, from
+[reports/agent_metrics_v2.json](reports/agent_metrics_v2.json)). The template
+cannot fail verification, so this verifies that the pipeline runs and nothing
+about the agent's faithfulness.
 
-Run it with:
+With the local model qwen2.5:7b via Ollama
+([reports/agent_metrics_llm_v2.json](reports/agent_metrics_llm_v2.json)), the
+first draft had **40 of 83** sentences unsupported (48.19%). The verifier's
+revision gate accepted **10** revisions and rejected **16**, and the final output
+held **27** unsupported sentences. Against the fixed first-draft denominator the
+final rate is **32.53%** (27/83), while against its own final-draft denominator
+it is 38.03% (27/71); because rejected revisions keep the first draft, the final
+rate mixes first and revised drafts, so the fixed-denominator figure is the
+headline. The first-draft sentence count is **83**, which differs from the v1
+run's 81, so the v1 and v2 rates are not directly comparable. Tool calls were
+chosen by the model, not by a fixed plan.
+
+Limits:
+
+- The verifier checks that a citation exists and that numbers appear in the cited
+  evidence; it does not check meaning.
+- Sentences can cite real evidence and still be wrong.
+- The LLM run is a single model on synthetic cases, not a general claim about LLM
+  drafting.
+
+Reproduce, offline (deterministic templates, no network):
 
 ```bash
-python -m fraud.agent.run --n 20
+PYTHONPATH=src python -m fraud.agent.run --n 20 \
+  --cases-path reports/agent_cases_v2.json \
+  --metrics-path reports/agent_metrics_v2.json
 ```
 
-That takes the flagged records with the most rules flagging them and writes
-`reports/agent_cases.json` and `reports/agent_metrics.json`. The metrics file
-holds the unsupported-sentence rate on the first draft and after the verifier
-loop, tool calls and revisions per case, and the mode used — see
-[reports/agent_metrics.json](reports/agent_metrics.json). It runs **offline by
-default** (deterministic templates, no network); set `LLM_API_KEY`,
-`LLM_BASE_URL` and `LLM_MODEL` to use an OpenAI-compatible model instead.
+and with the local model (env vars shown as placeholders, not real values):
+
+```bash
+PYTHONPATH=src LLM_BASE_URL=<base-url> LLM_API_KEY=<api-key> LLM_MODEL=<model> \
+  python -m fraud.agent.run --n 20 \
+  --cases-path reports/agent_cases_llm_v2.json \
+  --metrics-path reports/agent_metrics_llm_v2.json
+```
 
 These numbers come from the synthetic in-sample rule flags, so they are not a
 generalization estimate.
