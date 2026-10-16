@@ -250,6 +250,8 @@ first, because `reports/ml_scores.csv` is not committed; a fresh checkout needs
 no manual step. The API and the dashboard are read-only: they render the report
 files and compute nothing.
 
+A clean clone without `data/external/` runs the suite as **95 passed, 1 skipped** (the skip is `tests/test_ieee_cis.py`'s real-data test, which needs the untracked IEEE-CIS CSVs); where `data/external/` is populated, expect **96 passed**.
+
 ---
 
 ## Agent layer
