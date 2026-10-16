@@ -84,7 +84,9 @@ def _summary(values: list[int]) -> dict[str, Any]:
     }
 
 
-def compute_metrics(results: list[CaseResult], mode: str) -> dict[str, Any]:
+def compute_metrics(
+    results: list[CaseResult], mode: str, model: str | None = None
+) -> dict[str, Any]:
     """Aggregate per-case results, keeping before/after rates separate."""
     before_total = sum(result.verification_first.total for result in results)
     before_bad = sum(result.verification_first.unsupported for result in results)
@@ -95,6 +97,7 @@ def compute_metrics(results: list[CaseResult], mode: str) -> dict[str, Any]:
         "generated_by": "fraud.agent.run",
         "disclaimer": DISCLAIMER,
         "mode": mode,
+        "model": model,
         "n_cases": len(results),
         "unsupported_sentence_rate_before": _rate(before_bad, before_total),
         "unsupported_sentence_rate_after": _rate(after_bad, after_total),
@@ -115,6 +118,8 @@ def run(
     tables: dict[str, Any] | None = None,
     rules: list[Any] | None = None,
     cfg: Any | None = None,
+    cases_path: str | Path | None = None,
+    metrics_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Run the agent layer over the top ``n`` flagged records."""
     cfg = cfg or get_config()
@@ -130,16 +135,19 @@ def run(
         investigate(case, client, Toolbox(tables, rules=rules, cfg=cfg, scan=scan))
         for case in cases
     ]
-    metrics = compute_metrics(results, client.mode)
+    metrics = compute_metrics(results, client.mode, client.config.model)
 
     if write:
-        CASES_JSON.parent.mkdir(parents=True, exist_ok=True)
-        CASES_JSON.write_text(
+        cases_file = Path(cases_path) if cases_path is not None else CASES_JSON
+        metrics_file = Path(metrics_path) if metrics_path is not None else METRICS_JSON
+        cases_file.parent.mkdir(parents=True, exist_ok=True)
+        metrics_file.parent.mkdir(parents=True, exist_ok=True)
+        cases_file.write_text(
             json.dumps([result.to_dict() for result in results], indent=2),
             encoding="utf-8",
         )
-        METRICS_JSON.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
-        logger.info("Wrote %s and %s", CASES_JSON, METRICS_JSON)
+        metrics_file.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
+        logger.info("Wrote %s and %s", cases_file, metrics_file)
 
     return {"cases": [result.to_dict() for result in results], "metrics": metrics}
 
@@ -150,9 +158,22 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument("--n", type=int, default=20, help="number of cases")
     parser.add_argument("--no-write", action="store_true", help="do not write reports")
+    parser.add_argument(
+        "--cases-path", default=str(CASES_JSON), help="where to write the cases JSON"
+    )
+    parser.add_argument(
+        "--metrics-path",
+        default=str(METRICS_JSON),
+        help="where to write the metrics JSON",
+    )
     args = parser.parse_args(argv)
 
-    payload = run(n=args.n, write=not args.no_write)
+    payload = run(
+        n=args.n,
+        write=not args.no_write,
+        cases_path=args.cases_path,
+        metrics_path=args.metrics_path,
+    )
     metrics = payload["metrics"]
     print(
         f"mode={metrics['mode']} cases={metrics['n_cases']} "
