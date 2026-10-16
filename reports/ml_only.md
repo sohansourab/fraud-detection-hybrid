@@ -32,11 +32,11 @@
 | UNSEEN | 0 | in-sample |
 | total | 0 | in-sample |
 
-| unseen_type | events | ML_ONLY_CAUGHT | status |
-|---|---|---|---|
-| unseen_just_under_limit | 0 | 0 | not evaluable |
-| unseen_weekend_cluster | 0 | 0 | not evaluable |
-| unseen_growing_amounts | 0 | 0 | not evaluable |
+| unseen_type | events | ML_ONLY_CAUGHT | status | note |
+|---|---|---|---|---|
+| unseen_just_under_limit | 0 | 0 | no unseen events injected | no unseen events injected for this domain |
+| unseen_weekend_cluster | 0 | 0 | no unseen events injected | no unseen events injected for this domain |
+| unseen_growing_amounts | 0 | 0 | no unseen events injected | no unseen events injected for this domain |
 
 ### ML_ONLY_CAUGHT by fraud_type - MGNREGA Labor (CALIBRATED)
 
@@ -58,11 +58,11 @@
 | UNSEEN | 1 | in-sample |
 | total | 1 | in-sample |
 
-| unseen_type | events | ML_ONLY_CAUGHT | status |
-|---|---|---|---|
-| unseen_just_under_limit | 12 | 1 | in-sample |
-| unseen_weekend_cluster | 0 | 0 | not evaluable |
-| unseen_growing_amounts | 0 | 0 | not evaluable |
+| unseen_type | events | ML_ONLY_CAUGHT | status | note |
+|---|---|---|---|---|
+| unseen_just_under_limit | 12 | 1 | in-sample | 1 of 12, not evaluable as a recall estimate |
+| unseen_weekend_cluster | 0 | 0 | no unseen events injected | no unseen events injected for this domain |
+| unseen_growing_amounts | 0 | 0 | no unseen events injected | no unseen events injected for this domain |
 
 ## Excluded from the main table
 
@@ -80,11 +80,21 @@
 | UNSEEN | 27 | in-sample |
 | total | 27 | in-sample |
 
-| unseen_type | events | ML_ONLY_CAUGHT | status |
-|---|---|---|---|
-| unseen_just_under_limit | 0 | 0 | not evaluable |
-| unseen_weekend_cluster | 14 | 14 | in-sample |
-| unseen_growing_amounts | 13 | 13 | in-sample |
+| unseen_type | events | ML_ONLY_CAUGHT | status | note |
+|---|---|---|---|---|
+| unseen_just_under_limit | 0 | 0 | no unseen events injected | no unseen events injected for this domain |
+| unseen_weekend_cluster | 14 | 14 | in-sample | 14 of 14, in-sample (injected patterns; not a generalization estimate) |
+| unseen_growing_amounts | 13 | 13 | in-sample | 13 of 13, in-sample (injected patterns; not a generalization estimate) |
+
+## Threshold-selection leakage (unseen rows in val)
+
+> `ml.py` carves its val split out of the simulator's `train` split, so an injected unseen record that the simulator put in `train` can land in the val set whose precision chooses the threshold. That is leakage: the same typology we report UNSEEN recall on helped pick the operating point. The counts below are the evidence.
+
+| domain | val unseen | val unseen flagged | val flags excl unseen | val TP excl unseen | val prec excl unseen | note |
+|---|---|---|---|---|---|---|
+| Civil Registry | 0 | 0 | 2 | 1 | 0.500 | no unseen rows in val (threshold not selected on unseen) |
+| MGNREGA Labor | 3 | 0 | 14 | 11 | 0.786 | 3 unseen in val (0 flagged); excluding them val precision is 0.786 |
+| PM-JAY Medical | 6 | 6 | 7 | 3 | 0.429 | 6 unseen in val (6 flagged); excluding them val precision is 0.429 (< 0.5 target), so the label rests on the injected rows |
 
 ## Not evaluated
 

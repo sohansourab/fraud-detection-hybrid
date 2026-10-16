@@ -24,6 +24,10 @@ out by typology, and a type under ``simulator.min_events_per_type`` is marked
 ``not evaluable``. PM-JAY is pinned out of the main table while its calibration
 rests on the injected patterns.
 
+The report also carries a threshold-selection leakage diagnostic: ``ml.py``
+carves val out of the simulator's ``train`` split, so injected unseen rows can
+land in the val set that chooses the threshold. That is reported, not fixed.
+
 Run with::
 
     python -m fraud.ml_only
@@ -58,6 +62,12 @@ ML_LEVEL = "0.02"
 
 MIN_VAL_FLAGS = 10
 MIN_VAL_TP = 3
+
+#: A recall estimate from fewer caught records than this is too thin to report.
+MIN_CAUGHT_FOR_RECALL = 3
+
+#: Status for an unseen typology that this domain never injected.
+NO_UNSEEN = "no unseen events injected"
 
 CAVEAT = (
     "Scores are on synthetic labels. The UNSEEN patterns were injected by the "
@@ -211,6 +221,25 @@ def _has_type(fraud_type: str, target: str) -> bool:
     return target in [name.strip() for name in str(fraud_type).split("|")]
 
 
+def _events_status(event_count: int, min_events: int) -> str:
+    """Status of an unseen typology from its injected event count."""
+    if event_count == 0:
+        return NO_UNSEEN
+    return "in-sample" if event_count >= min_events else "not evaluable"
+
+
+def _recall_note(caught: int, events: int) -> str:
+    """Human note on the caught count; never a generalization claim."""
+    if events == 0:
+        return "no unseen events injected for this domain"
+    if caught < MIN_CAUGHT_FOR_RECALL:
+        return f"{caught} of {events}, not evaluable as a recall estimate"
+    return (
+        f"{caught} of {events}, in-sample (injected patterns; not a "
+        "generalization estimate)"
+    )
+
+
 def caught_split(
     frame: pd.DataFrame, rule_records: set[str], min_events: int
 ) -> dict[str, Any]:
@@ -230,23 +259,48 @@ def caught_split(
     by_type = []
     for name in UNSEEN_TYPES:
         event_count = events.get(name, 0)
+        caught_count = int(
+            unseen_caught["fraud_type"]
+            .map(lambda v: _has_type(v, name))
+            .astype(bool)
+            .sum()
+        )
         by_type.append({
             "fraud_type": name,
             "events": event_count,
-            "ml_only_caught": int(
-                unseen_caught["fraud_type"]
-                .map(lambda v: _has_type(v, name))
-                .astype(bool)
-                .sum()
-            ),
-            "evaluation_status": (
-                "in-sample" if event_count >= min_events else "not evaluable"
-            ),
+            "ml_only_caught": caught_count,
+            "evaluation_status": _events_status(event_count, min_events),
+            "recall_note": _recall_note(caught_count, event_count),
         })
     return {
         "ml_only_caught_known": int((~unseen_mask).sum()),
         "ml_only_caught_unseen": int(unseen_mask.sum()),
         "unseen_by_type": by_type,
+    }
+
+
+def leakage_check(frame: pd.DataFrame) -> dict[str, Any]:
+    """Whether the val split (threshold selection) contains unseen rows.
+
+    ``ml.py`` carves its val split out of the simulator's ``train`` split, so an
+    injected unseen record that the simulator put in ``train`` can land in the
+    val set whose precision chooses the threshold. That is leakage: the same
+    typology we report UNSEEN recall on helped pick the operating point.
+    """
+    val = frame[frame["split"] == "val"]
+    unseen = val["fraud_type"].map(_has_unseen).astype(bool)
+    flagged = val["ml_flag"] == 1
+    fraud = val["is_fraud"] == 1
+    val_unseen = int(unseen.sum())
+    flags_excl = int((flagged & ~unseen).sum())
+    tp_excl = int((fraud & flagged & ~unseen).sum())
+    return {
+        "val_unseen": val_unseen,
+        "val_unseen_flagged": int((unseen & flagged).sum()),
+        "val_flags_excl_unseen": flags_excl,
+        "val_tp_excl_unseen": tp_excl,
+        "val_precision_excl_unseen": (tp_excl / flags_excl) if flags_excl else None,
+        "leaks": val_unseen > 0,
     }
 
 
@@ -267,6 +321,7 @@ def evaluate_domain(
         "evaluation_status": "in-sample",
         **ml_only_stats(frame, rule_records),
         **split,
+        "leakage": leakage_check(frame),
         "val": val,
         "test": split_stats(frame[frame["split"] == "test"]),
         "by_fraud_type": caught_by_type(
@@ -331,13 +386,41 @@ def _split_table(domain: dict[str, Any]) -> list[str]:
         f"| UNSEEN | {domain['ml_only_caught_unseen']} | {domain['evaluation_status']} |",
         f"| total | {domain['ml_only_caught']} | {domain['evaluation_status']} |",
         "",
-        "| unseen_type | events | ML_ONLY_CAUGHT | status |",
-        "|---|---|---|---|",
+        "| unseen_type | events | ML_ONLY_CAUGHT | status | note |",
+        "|---|---|---|---|---|",
     ]
     for row in domain["unseen_by_type"]:
         lines.append(
             f"| {row['fraud_type']} | {row['events']} | {row['ml_only_caught']} "
-            f"| {row['evaluation_status']} |"
+            f"| {row['evaluation_status']} | {row['recall_note']} |"
+        )
+    return lines
+
+
+def _leakage_table(domains: list[dict[str, Any]], target: float) -> list[str]:
+    """Per-domain val-leakage diagnostic (unseen rows in the threshold split)."""
+    lines = [
+        "| domain | val unseen | val unseen flagged | val flags excl unseen "
+        "| val TP excl unseen | val prec excl unseen | note |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    for d in domains:
+        leak = d["leakage"]
+        prec = leak["val_precision_excl_unseen"]
+        if leak["leaks"]:
+            note = (
+                f"{leak['val_unseen']} unseen in val "
+                f"({leak['val_unseen_flagged']} flagged); excluding them val "
+                f"precision is {_fmt(prec)}"
+            )
+            if prec is not None and prec < target:
+                note += f" (< {target:g} target), so the label rests on the injected rows"
+        else:
+            note = "no unseen rows in val (threshold not selected on unseen)"
+        lines.append(
+            f"| {d['domain']} | {leak['val_unseen']} | {leak['val_unseen_flagged']} "
+            f"| {leak['val_flags_excl_unseen']} | {leak['val_tp_excl_unseen']} "
+            f"| {_fmt(prec)} | {note} |"
         )
     return lines
 
@@ -394,6 +477,23 @@ def render_markdown(payload: dict[str, Any]) -> str:
     for domain in level["excluded"]:
         lines.extend(_split_table(domain))
         lines.append("")
+
+    lines.append("## Threshold-selection leakage (unseen rows in val)")
+    lines.append("")
+    lines.append(
+        "> `ml.py` carves its val split out of the simulator's `train` split, so "
+        "an injected unseen record that the simulator put in `train` can land in "
+        "the val set whose precision chooses the threshold. That is leakage: the "
+        "same typology we report UNSEEN recall on helped pick the operating "
+        "point. The counts below are the evidence."
+    )
+    lines.append("")
+    lines.extend(
+        _leakage_table(
+            level["domains"] + level["excluded"], payload["precision_target"]
+        )
+    )
+    lines.append("")
 
     lines.append("## Not evaluated")
     lines.append("")

@@ -357,6 +357,49 @@ expectations in `tests/test_ml_only.py` (the old outcome is kept as history).
   (`test_report_calibration_expectations`,
   `test_known_and_unseen_sum_to_ml_only_caught`).
 
+## P4b-rerun follow-up - threshold-selection leakage (unseen rows in val)
+
+P2e injected the unseen typologies *before* the train/val carve, so some of them
+land in the val split that chooses the ML threshold. This is leakage: the same
+typologies whose UNSEEN recall is reported helped pick the operating point.
+
+- `data/labels.csv` carries **no** `val` split: the simulator assigns
+  `train`/`test` only (`split_for`, `test_fraction=0.2`). `ml.py` then carves
+  its `val` out of the simulator's `train` (`_carve_val`, stratified on
+  `is_fraud`, `val_fraction=0.2`, seed 42). So "does val contain unseen?" is a
+  question about the *effective* split in `reports/ml_scores.csv`, and the
+  answer is yes: 9 of the 39 unseen rows (23%).
+- Split counts per unseen typology (labels split has no val column):
+
+  | domain | unseen_type | labels train | labels test | ML train | ML val | ML test | total |
+  |---|---|---|---|---|---|---|---|
+  | MGNREGA Labor | unseen_just_under_limit | 8 | 4 | 5 | 3 | 4 | 12 |
+  | PM-JAY Medical | unseen_growing_amounts | 13 | 0 | 8 | 5 | 0 | 13 |
+  | PM-JAY Medical | unseen_weekend_cluster | 9 | 5 | 8 | 1 | 5 | 14 |
+
+- Consequence for the calibration label (val precision target 0.5):
+
+  | domain | val unseen | val unseen flagged | val flags excl unseen | val TP excl unseen | val prec excl unseen | effect |
+  |---|---|---|---|---|---|---|
+  | Civil Registry | 0 | 0 | 2 | 1 | 0.500 | none (no unseen injected) |
+  | MGNREGA Labor | 3 | 0 | 14 | 11 | 0.786 | none (unseen in val not flagged) |
+  | PM-JAY Medical | 6 | 6 | 7 | 3 | 0.429 | decisive: below 0.5, so CALIBRATED rests on the leaked rows |
+
+  PM-JAY's val precision with the unseen rows is 0.692 (13 flags, 9 TP; 6 of the
+  9 TP are unseen). Drop those 6 rows and it is 0.429 (7 flags, 3 TP) - below
+  the target, i.e. the pre-P2e `UNCALIBRATED` outcome. The label change recorded
+  above is therefore a leakage effect, not evidence the model generalizes.
+- Not fixed in P4b-rerun (reporting only). P4c must not reuse these
+  val-chosen thresholds as if val were independent; a follow-up should hold the
+  unseen typologies out of threshold selection entirely and re-choose the
+  threshold on known types only.
+- Reported (not hand-typed) in `reports/ml_only.md` /
+  `reports/ml_only.json` ("Threshold-selection leakage" + per-row `leakage`).
+- Regression tests: `tests/test_ml_only.py`
+  (`test_val_leakage_is_reported`; `test_known_and_unseen_sum_to_ml_only_caught`
+  now also pins the Civil "no unseen events injected" wording and the MGNREGA
+  "1 of 12, not evaluable as a recall estimate" note).
+
 ## Summary
 
 P1d/P1e changed only Rule 025:

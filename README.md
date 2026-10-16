@@ -336,7 +336,9 @@ Contributions welcome! Areas of interest:
   the unseen typologies, PM-JAY's validation precision crossed the target, so it
   now reads CALIBRATED. Those unseen patterns were written by the same simulator
   that wrote the labels, so this measures detection of our injected patterns,
-  not generalization. PM-JAY stays in the excluded block until P4c explains why
-  it should count.
+  not generalization. The val split that chooses the threshold also contains 6
+  of them; without those rows val precision is 0.429, below the 0.5 target, so
+  the threshold is not selected on an independent split. PM-JAY stays in the
+  excluded block until P4c explains why it should count.
 
 **⚠️ Disclaimer:** This is a demonstration system using synthetic data. For production use, integrate with actual government databases and legal frameworks.

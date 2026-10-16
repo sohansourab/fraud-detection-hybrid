@@ -7,7 +7,8 @@ Covers:
 * ``ML_ONLY_CAUGHT`` excludes records flagged by any rule;
 * the report's per-domain calibration outcomes are hardcoded (P4b-rerun) and
   every domain is reported exactly once;
-* ``KNOWN + UNSEEN == ML_ONLY_CAUGHT`` for every domain.
+* ``KNOWN + UNSEEN == ML_ONLY_CAUGHT`` for every domain;
+* the val split's unseen leakage is reported (P4b-rerun follow-up).
 """
 from __future__ import annotations
 
@@ -25,6 +26,7 @@ for _path in (REPO_ROOT / "src", REPO_ROOT):
 from fraud.ml_only import (  # noqa: E402
     ML_SCORES_CSV,
     MLError,
+    NO_UNSEEN,
     PINNED_EXCLUDED_NOTE,
     calibration_status,
     join_scores_labels,
@@ -49,6 +51,15 @@ EXPECTED_UNSEEN_TYPES = {
     "unseen_just_under_limit",
     "unseen_weekend_cluster",
     "unseen_growing_amounts",
+}
+
+#: Unseen rows that landed in the *effective* val split (the threshold split).
+#: ``ml.py`` carves val out of the simulator's train split, so these are the
+#: leaked rows. Hardcoded so a data change fails loudly, not silently.
+EXPECTED_VAL_UNSEEN = {
+    "Civil Registry": 0,
+    "MGNREGA Labor": 3,
+    "PM-JAY Medical": 6,
 }
 
 
@@ -149,4 +160,49 @@ def test_known_and_unseen_sum_to_ml_only_caught() -> None:
             EXPECTED_UNSEEN_TYPES
         ), domain["domain"]
         for row in domain["unseen_by_type"]:
-            assert row["evaluation_status"] in ("in-sample", "not evaluable")
+            assert row["evaluation_status"] in (
+                "in-sample", "not evaluable", NO_UNSEEN,
+            )
+            assert row["recall_note"]
+
+    # Civil injects no unseen typology: the row must say so, not "0 catches".
+    civil = next(d for d in rows if d["domain"] == "Civil Registry")
+    for row in civil["unseen_by_type"]:
+        assert row["evaluation_status"] == NO_UNSEEN
+        assert row["recall_note"] == "no unseen events injected for this domain"
+
+    # MGNREGA's single catch is too thin to report as a recall estimate.
+    mgnrega = next(d for d in rows if d["domain"] == "MGNREGA Labor")
+    thin = next(
+        r for r in mgnrega["unseen_by_type"]
+        if r["fraud_type"] == "unseen_just_under_limit"
+    )
+    assert (thin["ml_only_caught"], thin["events"]) == (1, 12)
+    assert "not evaluable as a recall estimate" in thin["recall_note"]
+
+
+def test_val_leakage_is_reported() -> None:
+    if not ML_SCORES_CSV.is_file():
+        pytest.skip("reports/ml_scores.csv not generated in this checkout")
+
+    payload = run(write=False)
+    level = payload["levels"]["0.02"]
+    target = payload["precision_target"]
+    rows = level["domains"] + level["excluded"]
+
+    for domain in rows:
+        leak = domain["leakage"]
+        assert leak["leaks"] == (leak["val_unseen"] > 0)
+        assert leak["val_unseen"] == EXPECTED_VAL_UNSEEN[domain["domain"]], (
+            domain["domain"]
+        )
+
+    # PM-JAY: 6 unseen rows sit in val; excluding them val precision falls
+    # below the target, so its CALIBRATED label rests on the injected patterns.
+    pmjay = next(d for d in rows if d["domain"] == "PM-JAY Medical")
+    assert pmjay["leakage"]["leaks"] is True
+    assert pmjay["leakage"]["val_unseen_flagged"] == pmjay["leakage"]["val_unseen"]
+    assert pmjay["leakage"]["val_precision_excl_unseen"] < target
+
+    civil = next(d for d in rows if d["domain"] == "Civil Registry")
+    assert civil["leakage"]["leaks"] is False

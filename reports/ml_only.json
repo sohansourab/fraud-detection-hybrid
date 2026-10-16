@@ -24,24 +24,35 @@
               "fraud_type": "unseen_just_under_limit",
               "events": 0,
               "ml_only_caught": 0,
-              "evaluation_status": "not evaluable",
+              "evaluation_status": "no unseen events injected",
+              "recall_note": "no unseen events injected for this domain",
               "calibration_status": "WEAK"
             },
             {
               "fraud_type": "unseen_weekend_cluster",
               "events": 0,
               "ml_only_caught": 0,
-              "evaluation_status": "not evaluable",
+              "evaluation_status": "no unseen events injected",
+              "recall_note": "no unseen events injected for this domain",
               "calibration_status": "WEAK"
             },
             {
               "fraud_type": "unseen_growing_amounts",
               "events": 0,
               "ml_only_caught": 0,
-              "evaluation_status": "not evaluable",
+              "evaluation_status": "no unseen events injected",
+              "recall_note": "no unseen events injected for this domain",
               "calibration_status": "WEAK"
             }
           ],
+          "leakage": {
+            "val_unseen": 0,
+            "val_unseen_flagged": 0,
+            "val_flags_excl_unseen": 2,
+            "val_tp_excl_unseen": 1,
+            "val_precision_excl_unseen": 0.5,
+            "leaks": false
+          },
           "val": {
             "n": 322,
             "fraud": 10,
@@ -113,23 +124,34 @@
               "events": 12,
               "ml_only_caught": 1,
               "evaluation_status": "in-sample",
+              "recall_note": "1 of 12, not evaluable as a recall estimate",
               "calibration_status": "CALIBRATED"
             },
             {
               "fraud_type": "unseen_weekend_cluster",
               "events": 0,
               "ml_only_caught": 0,
-              "evaluation_status": "not evaluable",
+              "evaluation_status": "no unseen events injected",
+              "recall_note": "no unseen events injected for this domain",
               "calibration_status": "CALIBRATED"
             },
             {
               "fraud_type": "unseen_growing_amounts",
               "events": 0,
               "ml_only_caught": 0,
-              "evaluation_status": "not evaluable",
+              "evaluation_status": "no unseen events injected",
+              "recall_note": "no unseen events injected for this domain",
               "calibration_status": "CALIBRATED"
             }
           ],
+          "leakage": {
+            "val_unseen": 3,
+            "val_unseen_flagged": 0,
+            "val_flags_excl_unseen": 14,
+            "val_tp_excl_unseen": 11,
+            "val_precision_excl_unseen": 0.7857142857142857,
+            "leaks": true
+          },
           "val": {
             "n": 809,
             "fraud": 26,
@@ -208,7 +230,8 @@
               "fraud_type": "unseen_just_under_limit",
               "events": 0,
               "ml_only_caught": 0,
-              "evaluation_status": "not evaluable",
+              "evaluation_status": "no unseen events injected",
+              "recall_note": "no unseen events injected for this domain",
               "calibration_status": "CALIBRATED"
             },
             {
@@ -216,6 +239,7 @@
               "events": 14,
               "ml_only_caught": 14,
               "evaluation_status": "in-sample",
+              "recall_note": "14 of 14, in-sample (injected patterns; not a generalization estimate)",
               "calibration_status": "CALIBRATED"
             },
             {
@@ -223,9 +247,18 @@
               "events": 13,
               "ml_only_caught": 13,
               "evaluation_status": "in-sample",
+              "recall_note": "13 of 13, in-sample (injected patterns; not a generalization estimate)",
               "calibration_status": "CALIBRATED"
             }
           ],
+          "leakage": {
+            "val_unseen": 6,
+            "val_unseen_flagged": 6,
+            "val_flags_excl_unseen": 7,
+            "val_tp_excl_unseen": 3,
+            "val_precision_excl_unseen": 0.42857142857142855,
+            "leaks": true
+          },
           "val": {
             "n": 500,
             "fraud": 20,
