@@ -316,6 +316,7 @@ Contributions welcome! Areas of interest:
 
 ---
 
+<!-- BEGIN GENERATED: hybrid -->
 ## Hybrid detection (synthetic data, in-sample)
 
 HYBRID selected rule-only on MGNREGA Labor validation, the only domain that met the calibration criteria. The selection set had no room for a different outcome: on those 806 known-typology validation rows the rules had zero false positives and zero false negatives, so every candidate could match them at best and none could beat them. The selection therefore tells us only which candidates add false positives, not which combination is best.
@@ -325,6 +326,7 @@ On the MGNREGA test split, HYBRID matches the rules exactly, with precision and 
 The ML score's precision fell from 0.786 on validation to 0.476 on test. This instability is the main finding for the ML layer, not the HYBRID row. Civil Registry (WEAK: two validation flags) and PM-JAY (UNCALIBRATED: seven flags, three true positives, precision 0.429) are not calibrated and are excluded from the main table. A sensitivity run on PM-JAY with a different threshold gave two flags, both correct, which is too little evidence to use.
 
 All numbers are on synthetic labels. Unseen recall measures detection of injected patterns, not generalization. ML thresholds are per-domain and not comparable across domains.
+<!-- END GENERATED: hybrid -->
 
 ---
 
