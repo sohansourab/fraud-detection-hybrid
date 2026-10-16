@@ -16,3 +16,6 @@ output/
 
 # Keep the committed regression snapshot under tests/
 !tests/baseline/*.json
+
+# Keep the generated evaluation metrics (the source of truth for docs)
+!reports/metrics.json

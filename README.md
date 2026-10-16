@@ -318,4 +318,17 @@ Contributions welcome! Areas of interest:
 
 
 
+## ⚠️ Limitations
+
+- **In-sample evaluation only.** The rule metrics in `reports/metrics.md` (run
+  with `make eval`) are scored against the same injections the simulator
+  planted, so they are optimistic and are *not* generalization estimates.
+- **Cross-scheme detection is not validated.** The Rule 025 multi-scheme
+  injection only shows that planted cross-scheme records were generated and
+  joined correctly; it says nothing about whether the rule would catch real
+  cross-scheme fraud.
+- **ML layer not built.** The `ML_ONLY` and `HYBRID` detectors are not
+  implemented yet (planned for P4); the evaluation reports them as
+  "not built", not as zero.
+
 **⚠️ Disclaimer:** This is a demonstration system using synthetic data. For production use, integrate with actual government databases and legal frameworks.
