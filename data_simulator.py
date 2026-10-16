@@ -181,7 +181,7 @@ MILL_GROUP_SIZE = max(
 Path("data").mkdir(exist_ok=True)
 Path("output/reports").mkdir(parents=True, exist_ok=True)
 
-print("🚀 Starting Synthetic Data Generation with Fraud Contamination...")
+print("- Starting Synthetic Data Generation with Fraud Contamination...")
 print(f"   Total Fraud Injection Points: {len(FRAUD_RATES)} rules")
 print(f"   Target prevalence: {SIM.prevalence:.0%} (scale factor {_SCALE:.4f})")
 print(f"   Structural floors: cartel_groups={CARTEL_GROUPS}, mill={MILL_GROUPS}x{MILL_GROUP_SIZE}\n")
@@ -193,7 +193,7 @@ print(f"   Structural floors: cartel_groups={CARTEL_GROUPS}, mill={MILL_GROUPS}x
 
 def generate_beneficiaries():
     """Generate beneficiaries with Rules 1-4, 13 fraud patterns"""
-    print(f"📋 Generating {NUM_BENEFICIARIES} Beneficiaries (Civil Registry)...")
+    print(f"- Generating {NUM_BENEFICIARIES} Beneficiaries (Civil Registry)...")
     
     beneficiaries = []
     aadhaar_rng = make_rng()  # deterministic Aadhaar hashes (seeded)
@@ -321,7 +321,7 @@ def generate_beneficiaries():
     df = pd.DataFrame(beneficiaries)
     df.to_csv('data/beneficiaries.csv', index=False)
     
-    print(f"   ✅ beneficiaries.csv created")
+    print(f"   OK beneficiaries.csv created")
     print(f"      Fraud injections: {fraud_tracker}")
     return df
 
@@ -356,7 +356,7 @@ def _build_cartel_groups(valid_job_cards, sim):
 
 def generate_mgnrega_transactions(df_beneficiaries):
     """Generate MGNREGA transactions with Rules 5-8, 17 fraud patterns"""
-    print(f"\n🔨 Generating {NUM_MGNREGA_TXNS} MGNREGA Transactions (Labor Fraud)...")
+    print(f"\n- Generating {NUM_MGNREGA_TXNS} MGNREGA Transactions (Labor Fraud)...")
     
     transactions = []
     valid_job_cards = df_beneficiaries[df_beneficiaries['JobCardID'].notna()]['JobCardID'].tolist()
@@ -472,7 +472,7 @@ def generate_mgnrega_transactions(df_beneficiaries):
     df = pd.DataFrame(transactions)
     df.to_csv('data/transactions_mgnrega.csv', index=False)
     
-    print(f"   ✅ transactions_mgnrega.csv created")
+    print(f"   OK transactions_mgnrega.csv created")
     print(f"      Fraud injections: {fraud_tracker}")
     return df
 
@@ -483,7 +483,7 @@ def generate_mgnrega_transactions(df_beneficiaries):
 
 def generate_pmjay_transactions(df_beneficiaries):
     """Generate PM-JAY claims with Rules 9-12, 21 fraud patterns"""
-    print(f"\n🏥 Generating {NUM_PMJAY_TXNS} PM-JAY Medical Claims (Medical Fraud)...")
+    print(f"\n- Generating {NUM_PMJAY_TXNS} PM-JAY Medical Claims (Medical Fraud)...")
     
     claims = []
     ben_ids = df_beneficiaries['BeneficiaryID'].tolist()
@@ -612,7 +612,7 @@ def generate_pmjay_transactions(df_beneficiaries):
     df = pd.DataFrame(claims)
     df.to_csv('data/transactions_pmjay.csv', index=False)
     
-    print(f"   ✅ transactions_pmjay.csv created")
+    print(f"   OK transactions_pmjay.csv created")
     print(f"      Fraud injections: {fraud_tracker}")
     return df
 
@@ -623,7 +623,7 @@ def generate_pmjay_transactions(df_beneficiaries):
 
 def generate_fraud_ground_truth(df_beneficiaries, df_mgnrega, df_pmjay):
     """Generate a ground truth report for ML model training/validation"""
-    print(f"\n📊 Generating Fraud Ground Truth Report...")
+    print(f"\n- Generating Fraud Ground Truth Report...")
     
     ground_truth = {
         'generation_timestamp': datetime.now().isoformat(),
@@ -657,11 +657,11 @@ def generate_fraud_ground_truth(df_beneficiaries, df_mgnrega, df_pmjay):
     with open('output/reports/fraud_ground_truth.json', 'w') as f:
         json.dump(ground_truth, f, indent=2)
     
-    print(f"   ✅ fraud_ground_truth.json created")
+    print(f"   OK fraud_ground_truth.json created")
     
     # Calculate total excluding RULE_025 (which is cross-domain)
     total_fraud = sum(v for k, v in ground_truth['expected_fraud_counts'].items() if k != 'RULE_025')
-    print(f"\n📈 Expected Total Fraud Cases: {total_fraud} (excluding cross-domain RULE_025)")
+    print(f"\n- Expected Total Fraud Cases: {total_fraud} (excluding cross-domain RULE_025)")
 
 
 # =============================================================================
@@ -703,7 +703,7 @@ def write_labels(df_beneficiaries, df_mgnrega, df_pmjay):
 
     hard_negatives = int((labels['fraud_type'] == 'hard_negative_blank_mobile').sum())
     print(
-        f"   ✅ labels.csv created ({len(labels)} records, "
+        f"   OK labels.csv created ({len(labels)} records, "
         f"{int(labels['is_fraud'].sum())} fraud, {hard_negatives} hard negatives)"
     )
     return labels
@@ -1129,17 +1129,17 @@ if __name__ == "__main__":
     generate_fraud_ground_truth(df_ben, df_mgn, df_pmjay)
     
     print("\n" + "="*70)
-    print("🎉 SYNTHETIC DATA GENERATION COMPLETE")
+    print("- SYNTHETIC DATA GENERATION COMPLETE")
     print("="*70)
-    print(f"✅ Generated {NUM_BENEFICIARIES} beneficiaries")
-    print(f"✅ Generated {NUM_MGNREGA_TXNS} MGNREGA transactions")
-    print(f"✅ Generated {NUM_PMJAY_TXNS} PM-JAY claims")
-    print(f"✅ All datasets contaminated with 16 fraud patterns (Rules 1-25)")
-    print(f"\n📁 Files created:")
+    print(f"OK Generated {NUM_BENEFICIARIES} beneficiaries")
+    print(f"OK Generated {NUM_MGNREGA_TXNS} MGNREGA transactions")
+    print(f"OK Generated {NUM_PMJAY_TXNS} PM-JAY claims")
+    print(f"OK All datasets contaminated with 16 fraud patterns (Rules 1-25)")
+    print(f"\n- Files created:")
     print(f"   - data/beneficiaries.csv")
     print(f"   - data/transactions_mgnrega.csv")
     print(f"   - data/transactions_pmjay.csv")
     print(f"   - data/labels.csv")
     print(f"   - output/reports/fraud_ground_truth.json")
-    print(f"\n🔍 Next step: Run audit_scanner.py to detect the injected fraud!")
+    print(f"\n- Next step: Run audit_scanner.py to detect the injected fraud!")
     print("="*70)
