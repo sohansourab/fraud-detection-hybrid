@@ -1,0 +1,5649 @@
+[
+  {
+    "record_id": "BEN_10000",
+    "domain": "Civil Registry",
+    "rule_ids": [
+      "RULE_004",
+      "RULE_013"
+    ],
+    "evidence": [
+      {
+        "id": "E1",
+        "tool": "explain_rule",
+        "text": "rule RULE_004 | name=Mega Family | domain=Civil Registry | severity=25 | description=Family has >15 members - potential ration hoarding",
+        "arguments": {
+          "rule_id": "RULE_004"
+        },
+        "data": {
+          "rule_id": "RULE_004",
+          "name": "Mega Family",
+          "domain": "Civil Registry",
+          "severity": 25,
+          "description": "Family has >15 members - potential ration hoarding"
+        }
+      },
+      {
+        "id": "E2",
+        "tool": "explain_rule",
+        "text": "rule RULE_013 | name=Clone Detection | domain=Civil Registry | severity=30 | description=Mobile number shared by >3 beneficiaries - identity broker/farming",
+        "arguments": {
+          "rule_id": "RULE_013"
+        },
+        "data": {
+          "rule_id": "RULE_013",
+          "name": "Clone Detection",
+          "domain": "Civil Registry",
+          "severity": 30,
+          "description": "Mobile number shared by >3 beneficiaries - identity broker/farming"
+        }
+      },
+      {
+        "id": "E3",
+        "tool": "get_record",
+        "text": "record BEN_10000 | domain=Civil Registry | BeneficiaryID=BEN_10000 | Name=Aryan Maharaj | Age=32 | Gender=M | MobileNumber=9995822412 | AadhaarHash=1C80A3B1799D | FamilyID=FAM_00000 | District=Naqli Nagar | JobCardID=JC_356787",
+        "arguments": {
+          "record_id": "BEN_10000"
+        },
+        "data": {
+          "record": {
+            "BeneficiaryID": "BEN_10000",
+            "Name": "Aryan Maharaj",
+            "Age": "32",
+            "Gender": "M",
+            "MobileNumber": "9995822412",
+            "AadhaarHash": "1C80A3B1799D",
+            "FamilyID": "FAM_00000",
+            "District": "Naqli Nagar",
+            "JobCardID": "JC_356787"
+          },
+          "domain": "Civil Registry"
+        }
+      },
+      {
+        "id": "E4",
+        "tool": "get_neighbors",
+        "text": "10 neighbor record(s) for BEN_10000: BEN_10001 shares mobile; BEN_10002 shares mobile; BEN_10003 shares mobile; BEN_10004 shares mobile; CLM_000035 shares beneficiary_id; CLM_000135 shares beneficiary_id; CLM_000625 shares beneficiary_id; TXN_MGN_001098 shares job_card; TXN_MGN_002390 shares job_card; TXN_MGN_002531 shares job_card",
+        "arguments": {
+          "record_id": "BEN_10000"
+        },
+        "data": {
+          "count": 10,
+          "neighbors": [
+            {
+              "record_id": "BEN_10001",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_10002",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_10003",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_10004",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "CLM_000035",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "CLM_000135",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "CLM_000625",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_001098",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_002390",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_002531",
+              "shares": [
+                "job_card"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "E5",
+        "tool": "run_rule",
+        "text": "rule RULE_004 (Mega Family) flags record BEN_10000 | evidence={\"family_id\": \"FAM_00000\", \"family_size\": 21}",
+        "arguments": {
+          "rule_id": "RULE_004",
+          "record_id": "BEN_10000"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "family_id": "FAM_00000",
+            "family_size": 21
+          }
+        }
+      },
+      {
+        "id": "E6",
+        "tool": "run_rule",
+        "text": "rule RULE_013 (Clone Detection) flags record BEN_10000 | evidence={\"mobile_number\": \"9995822412\", \"shared_by\": 5}",
+        "arguments": {
+          "rule_id": "RULE_013",
+          "record_id": "BEN_10000"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "mobile_number": "9995822412",
+            "shared_by": 5
+          }
+        }
+      }
+    ],
+    "draft_first": "Record BEN_10000 has been flagged for review due to two specific issues identified by the rules:\n\n1. The record violates RULE_004, indicating that the family associated with BeneficiaryID BEN_10000 has 21 members, which is more than the threshold of 15 members [E5]. This suggests potential ration hoarding.\n\n2. The record also triggers RULE_013, showing that the mobile number 9995822412 is shared by 5 beneficiaries, which is above the threshold of 3 [E6]. This could indicate identity broker or farming activities.\n\nFurther investigation is recommended to understand the context and ensure compliance with regulations. [E1][E2]",
+    "draft_final": "Record BEN_10000 has been flagged for review due to two specific issues identified by the rules:\n\n1. The record violates RULE_004 [E5], indicating that the family associated with BeneficiaryID BEN_10000 has 21 members, which is more than the threshold of 15 members [E1].\n\n2. The record also triggers RULE_013 [E6], showing that the mobile number 9995822412 is shared by 5 beneficiaries, which is above the threshold of 3 [E2].\n\nFurther investigation is recommended to understand the context and ensure compliance with regulations.",
+    "verification_first": {
+      "verdict": false,
+      "total": 9,
+      "unsupported": 8,
+      "sentences": [
+        {
+          "sentence": "Record BEN_10000 has been flagged for review due to two specific issues identified by the rules:",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 10000"
+          ]
+        },
+        {
+          "sentence": "1.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 1"
+          ]
+        },
+        {
+          "sentence": "The record violates RULE_004, indicating that the family associated with BeneficiaryID BEN_10000 has 21 members, which is more than the threshold of 15 members [E5].",
+          "evidence_ids": [
+            "E5"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 15"
+          ]
+        },
+        {
+          "sentence": "This suggests potential ration hoarding.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list"
+          ]
+        },
+        {
+          "sentence": "2.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 2"
+          ]
+        },
+        {
+          "sentence": "The record also triggers RULE_013, showing that the mobile number 9995822412 is shared by 5 beneficiaries, which is above the threshold of 3 [E6].",
+          "evidence_ids": [
+            "E6"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 3"
+          ]
+        },
+        {
+          "sentence": "This could indicate identity broker or farming activities.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list"
+          ]
+        },
+        {
+          "sentence": "Further investigation is recommended to understand the context and ensure compliance with regulations.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list"
+          ]
+        },
+        {
+          "sentence": "[E1][E2]",
+          "evidence_ids": [
+            "E1",
+            "E2"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "verification": {
+      "verdict": false,
+      "total": 6,
+      "unsupported": 4,
+      "sentences": [
+        {
+          "sentence": "Record BEN_10000 has been flagged for review due to two specific issues identified by the rules:",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 10000"
+          ]
+        },
+        {
+          "sentence": "1.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 1"
+          ]
+        },
+        {
+          "sentence": "The record violates RULE_004 [E5], indicating that the family associated with BeneficiaryID BEN_10000 has 21 members, which is more than the threshold of 15 members [E1].",
+          "evidence_ids": [
+            "E5",
+            "E1"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "2.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 2"
+          ]
+        },
+        {
+          "sentence": "The record also triggers RULE_013 [E6], showing that the mobile number 9995822412 is shared by 5 beneficiaries, which is above the threshold of 3 [E2].",
+          "evidence_ids": [
+            "E6",
+            "E2"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Further investigation is recommended to understand the context and ensure compliance with regulations.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list"
+          ]
+        }
+      ]
+    },
+    "revisions": 2,
+    "revisions_accepted": 2,
+    "revision_rejected": false,
+    "tool_calls": 6,
+    "tool_call_log": [
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_004"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_013"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_record",
+        "arguments": {
+          "record_id": "BEN_10000"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_neighbors",
+        "arguments": {
+          "record_id": "BEN_10000"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_10000",
+          "rule_id": "RULE_004"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_10000",
+          "rule_id": "RULE_013"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      }
+    ],
+    "status": "needs_human",
+    "mode": "llm",
+    "error": null
+  },
+  {
+    "record_id": "BEN_10001",
+    "domain": "Civil Registry",
+    "rule_ids": [
+      "RULE_004",
+      "RULE_013"
+    ],
+    "evidence": [
+      {
+        "id": "E1",
+        "tool": "get_record",
+        "text": "record BEN_10001 | domain=Civil Registry | BeneficiaryID=BEN_10001 | Name=Viraj Tiwari | Age=29 | Gender=O | MobileNumber=9995822412 | AadhaarHash=BDD606671AD1 | FamilyID=FAM_00000 | District=Naqli Nagar | JobCardID=JC_131244",
+        "arguments": {
+          "record_id": "BEN_10001"
+        },
+        "data": {
+          "record": {
+            "BeneficiaryID": "BEN_10001",
+            "Name": "Viraj Tiwari",
+            "Age": "29",
+            "Gender": "O",
+            "MobileNumber": "9995822412",
+            "AadhaarHash": "BDD606671AD1",
+            "FamilyID": "FAM_00000",
+            "District": "Naqli Nagar",
+            "JobCardID": "JC_131244"
+          },
+          "domain": "Civil Registry"
+        }
+      },
+      {
+        "id": "E2",
+        "tool": "explain_rule",
+        "text": "rule RULE_004 | name=Mega Family | domain=Civil Registry | severity=25 | description=Family has >15 members - potential ration hoarding",
+        "arguments": {
+          "rule_id": "RULE_004"
+        },
+        "data": {
+          "rule_id": "RULE_004",
+          "name": "Mega Family",
+          "domain": "Civil Registry",
+          "severity": 25,
+          "description": "Family has >15 members - potential ration hoarding"
+        }
+      },
+      {
+        "id": "E3",
+        "tool": "explain_rule",
+        "text": "rule RULE_013 | name=Clone Detection | domain=Civil Registry | severity=30 | description=Mobile number shared by >3 beneficiaries - identity broker/farming",
+        "arguments": {
+          "rule_id": "RULE_013"
+        },
+        "data": {
+          "rule_id": "RULE_013",
+          "name": "Clone Detection",
+          "domain": "Civil Registry",
+          "severity": 30,
+          "description": "Mobile number shared by >3 beneficiaries - identity broker/farming"
+        }
+      },
+      {
+        "id": "E4",
+        "tool": "get_neighbors",
+        "text": "9 neighbor record(s) for BEN_10001: BEN_10000 shares mobile; BEN_10002 shares mobile; BEN_10003 shares mobile; BEN_10004 shares mobile; CLM_001308 shares beneficiary_id; CLM_001947 shares beneficiary_id; CLM_002439 shares beneficiary_id; TXN_MGN_001789 shares job_card; TXN_MGN_004076 shares job_card",
+        "arguments": {
+          "record_id": "BEN_10001"
+        },
+        "data": {
+          "count": 9,
+          "neighbors": [
+            {
+              "record_id": "BEN_10000",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_10002",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_10003",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_10004",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "CLM_001308",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "CLM_001947",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "CLM_002439",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_001789",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_004076",
+              "shares": [
+                "job_card"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "draft_first": "Record BEN_10001 was flagged for review due to potential identity farming and possible ration hoarding. The record shows that the beneficiary Viraj Tiwari shares a mobile number with 4 other beneficiaries, triggering the Clone Detection rule [E3]. Additionally, the record has a FamilyID, suggesting a family of potentially more than 15 members, which triggers the Mega Family rule [E2]. Further investigation is recommended to verify the relationships and ensure compliance [E1, E4].",
+    "draft_final": "Record BEN_10001 was flagged for review due to potential identity farming and possible ration hoarding, as indicated by the Clone Detection rule [E3] and the Mega Family rule [E2]. The record shows that the beneficiary Viraj Tiwari shares a mobile number with 3 other beneficiaries, triggering the Clone Detection rule [E3].",
+    "verification_first": {
+      "verdict": false,
+      "total": 4,
+      "unsupported": 2,
+      "sentences": [
+        {
+          "sentence": "Record BEN_10001 was flagged for review due to potential identity farming and possible ration hoarding.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 10001"
+          ]
+        },
+        {
+          "sentence": "The record shows that the beneficiary Viraj Tiwari shares a mobile number with 4 other beneficiaries, triggering the Clone Detection rule [E3].",
+          "evidence_ids": [
+            "E3"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 4"
+          ]
+        },
+        {
+          "sentence": "Additionally, the record has a FamilyID, suggesting a family of potentially more than 15 members, which triggers the Mega Family rule [E2].",
+          "evidence_ids": [
+            "E2"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Further investigation is recommended to verify the relationships and ensure compliance [E1, E4].",
+          "evidence_ids": [
+            "E1",
+            "E4"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "verification": {
+      "verdict": false,
+      "total": 2,
+      "unsupported": 1,
+      "sentences": [
+        {
+          "sentence": "Record BEN_10001 was flagged for review due to potential identity farming and possible ration hoarding, as indicated by the Clone Detection rule [E3] and the Mega Family rule [E2].",
+          "evidence_ids": [
+            "E3",
+            "E2"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 10001"
+          ]
+        },
+        {
+          "sentence": "The record shows that the beneficiary Viraj Tiwari shares a mobile number with 3 other beneficiaries, triggering the Clone Detection rule [E3].",
+          "evidence_ids": [
+            "E3"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "revisions": 2,
+    "revisions_accepted": 1,
+    "revision_rejected": true,
+    "tool_calls": 4,
+    "tool_call_log": [
+      {
+        "tool": "get_record",
+        "arguments": {
+          "record_id": "BEN_10001"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_004"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_013"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_neighbors",
+        "arguments": {
+          "record_id": "BEN_10001"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      }
+    ],
+    "status": "needs_human",
+    "mode": "llm",
+    "error": null
+  },
+  {
+    "record_id": "BEN_10002",
+    "domain": "Civil Registry",
+    "rule_ids": [
+      "RULE_004",
+      "RULE_013"
+    ],
+    "evidence": [
+      {
+        "id": "E1",
+        "tool": "explain_rule",
+        "text": "rule RULE_004 | name=Mega Family | domain=Civil Registry | severity=25 | description=Family has >15 members - potential ration hoarding",
+        "arguments": {
+          "rule_id": "RULE_004"
+        },
+        "data": {
+          "rule_id": "RULE_004",
+          "name": "Mega Family",
+          "domain": "Civil Registry",
+          "severity": 25,
+          "description": "Family has >15 members - potential ration hoarding"
+        }
+      },
+      {
+        "id": "E2",
+        "tool": "explain_rule",
+        "text": "rule RULE_013 | name=Clone Detection | domain=Civil Registry | severity=30 | description=Mobile number shared by >3 beneficiaries - identity broker/farming",
+        "arguments": {
+          "rule_id": "RULE_013"
+        },
+        "data": {
+          "rule_id": "RULE_013",
+          "name": "Clone Detection",
+          "domain": "Civil Registry",
+          "severity": 30,
+          "description": "Mobile number shared by >3 beneficiaries - identity broker/farming"
+        }
+      },
+      {
+        "id": "E3",
+        "tool": "get_record",
+        "text": "record BEN_10002 | domain=Civil Registry | BeneficiaryID=BEN_10002 | Name=Pahal Oak | Age=43 | Gender=O | MobileNumber=9995822412 | AadhaarHash=3EB146685257 | FamilyID=FAM_00000 | District=Ghotala | JobCardID=JC_671412",
+        "arguments": {
+          "record_id": "BEN_10002"
+        },
+        "data": {
+          "record": {
+            "BeneficiaryID": "BEN_10002",
+            "Name": "Pahal Oak",
+            "Age": "43",
+            "Gender": "O",
+            "MobileNumber": "9995822412",
+            "AadhaarHash": "3EB146685257",
+            "FamilyID": "FAM_00000",
+            "District": "Ghotala",
+            "JobCardID": "JC_671412"
+          },
+          "domain": "Civil Registry"
+        }
+      },
+      {
+        "id": "E4",
+        "tool": "run_rule",
+        "text": "rule RULE_004 (Mega Family) flags record BEN_10002 | evidence={\"family_id\": \"FAM_00000\", \"family_size\": 21}",
+        "arguments": {
+          "rule_id": "RULE_004",
+          "record_id": "BEN_10002"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "family_id": "FAM_00000",
+            "family_size": 21
+          }
+        }
+      },
+      {
+        "id": "E5",
+        "tool": "run_rule",
+        "text": "rule RULE_013 (Clone Detection) flags record BEN_10002 | evidence={\"mobile_number\": \"9995822412\", \"shared_by\": 5}",
+        "arguments": {
+          "rule_id": "RULE_013",
+          "record_id": "BEN_10002"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "mobile_number": "9995822412",
+            "shared_by": 5
+          }
+        }
+      },
+      {
+        "id": "E6",
+        "tool": "get_neighbors",
+        "text": "10 neighbor record(s) for BEN_10002: BEN_10000 shares mobile; BEN_10001 shares mobile; BEN_10003 shares mobile; BEN_10004 shares mobile; CLM_000181 shares beneficiary_id; TXN_MGN_000234 shares job_card; TXN_MGN_000564 shares job_card; TXN_MGN_000907 shares job_card; TXN_MGN_001163 shares job_card; TXN_MGN_003985 shares job_card",
+        "arguments": {
+          "record_id": "BEN_10002"
+        },
+        "data": {
+          "count": 10,
+          "neighbors": [
+            {
+              "record_id": "BEN_10000",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_10001",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_10003",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_10004",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "CLM_000181",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_000234",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_000564",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_000907",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_001163",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_003985",
+              "shares": [
+                "job_card"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "draft_first": "Record BEN_10002 has been flagged for review due to potential issues identified by RULE_004 and RULE_013. According to the evidence, the family associated with BEN_10002 has 21 members, which exceeds the threshold of 15 members set by RULE_004 [E4]. Additionally, the mobile number 9995822412 is shared by 5 beneficiaries, triggering the identity broker/farming concerns outlined by RULE_013 [E5]. Further investigation is recommended to verify the accuracy and legitimacy of these flagged records [E6].",
+    "draft_final": "Record BEN_10002 has been flagged for review due to potential issues identified by RULE_004 and RULE_013. According to the evidence, the family associated with BEN_10002 has 21 members, which exceeds the threshold of 15 members set by RULE_004 [E4]. Additionally, the mobile number 9995822412 is shared by 5 beneficiaries, triggering the identity broker/farming concerns outlined by RULE_013 [E5]. Further investigation is recommended to verify the accuracy and legitimacy of these flagged records [E6].",
+    "verification_first": {
+      "verdict": false,
+      "total": 4,
+      "unsupported": 2,
+      "sentences": [
+        {
+          "sentence": "Record BEN_10002 has been flagged for review due to potential issues identified by RULE_004 and RULE_013.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 004, 013, 10002"
+          ]
+        },
+        {
+          "sentence": "According to the evidence, the family associated with BEN_10002 has 21 members, which exceeds the threshold of 15 members set by RULE_004 [E4].",
+          "evidence_ids": [
+            "E4"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 15"
+          ]
+        },
+        {
+          "sentence": "Additionally, the mobile number 9995822412 is shared by 5 beneficiaries, triggering the identity broker/farming concerns outlined by RULE_013 [E5].",
+          "evidence_ids": [
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Further investigation is recommended to verify the accuracy and legitimacy of these flagged records [E6].",
+          "evidence_ids": [
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "verification": {
+      "verdict": false,
+      "total": 4,
+      "unsupported": 2,
+      "sentences": [
+        {
+          "sentence": "Record BEN_10002 has been flagged for review due to potential issues identified by RULE_004 and RULE_013.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 004, 013, 10002"
+          ]
+        },
+        {
+          "sentence": "According to the evidence, the family associated with BEN_10002 has 21 members, which exceeds the threshold of 15 members set by RULE_004 [E4].",
+          "evidence_ids": [
+            "E4"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 15"
+          ]
+        },
+        {
+          "sentence": "Additionally, the mobile number 9995822412 is shared by 5 beneficiaries, triggering the identity broker/farming concerns outlined by RULE_013 [E5].",
+          "evidence_ids": [
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Further investigation is recommended to verify the accuracy and legitimacy of these flagged records [E6].",
+          "evidence_ids": [
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "revisions": 1,
+    "revisions_accepted": 0,
+    "revision_rejected": true,
+    "tool_calls": 6,
+    "tool_call_log": [
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_004"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_013"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_record",
+        "arguments": {
+          "record_id": "BEN_10002"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_10002",
+          "rule_id": "RULE_004"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_10002",
+          "rule_id": "RULE_013"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_neighbors",
+        "arguments": {
+          "record_id": "BEN_10002"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      }
+    ],
+    "status": "needs_human",
+    "mode": "llm",
+    "error": null
+  },
+  {
+    "record_id": "BEN_10003",
+    "domain": "Civil Registry",
+    "rule_ids": [
+      "RULE_004",
+      "RULE_013"
+    ],
+    "evidence": [
+      {
+        "id": "E1",
+        "tool": "get_record",
+        "text": "record BEN_10003 | domain=Civil Registry | BeneficiaryID=BEN_10003 | Name=Caleb Sharaf | Age=38 | Gender=O | MobileNumber=9995822412 | AadhaarHash=23B8392456DE | FamilyID=FAM_00000 | District=Ghotala | JobCardID=JC_391369",
+        "arguments": {
+          "record_id": "BEN_10003"
+        },
+        "data": {
+          "record": {
+            "BeneficiaryID": "BEN_10003",
+            "Name": "Caleb Sharaf",
+            "Age": "38",
+            "Gender": "O",
+            "MobileNumber": "9995822412",
+            "AadhaarHash": "23B8392456DE",
+            "FamilyID": "FAM_00000",
+            "District": "Ghotala",
+            "JobCardID": "JC_391369"
+          },
+          "domain": "Civil Registry"
+        }
+      },
+      {
+        "id": "E2",
+        "tool": "explain_rule",
+        "text": "rule RULE_004 | name=Mega Family | domain=Civil Registry | severity=25 | description=Family has >15 members - potential ration hoarding",
+        "arguments": {
+          "rule_id": "RULE_004"
+        },
+        "data": {
+          "rule_id": "RULE_004",
+          "name": "Mega Family",
+          "domain": "Civil Registry",
+          "severity": 25,
+          "description": "Family has >15 members - potential ration hoarding"
+        }
+      },
+      {
+        "id": "E3",
+        "tool": "explain_rule",
+        "text": "rule RULE_013 | name=Clone Detection | domain=Civil Registry | severity=30 | description=Mobile number shared by >3 beneficiaries - identity broker/farming",
+        "arguments": {
+          "rule_id": "RULE_013"
+        },
+        "data": {
+          "rule_id": "RULE_013",
+          "name": "Clone Detection",
+          "domain": "Civil Registry",
+          "severity": 30,
+          "description": "Mobile number shared by >3 beneficiaries - identity broker/farming"
+        }
+      },
+      {
+        "id": "E4",
+        "tool": "get_neighbors",
+        "text": "6 neighbor record(s) for BEN_10003: BEN_10000 shares mobile; BEN_10001 shares mobile; BEN_10002 shares mobile; BEN_10004 shares mobile; TXN_MGN_002448 shares job_card; TXN_MGN_004946 shares job_card",
+        "arguments": {
+          "record_id": "BEN_10003"
+        },
+        "data": {
+          "count": 6,
+          "neighbors": [
+            {
+              "record_id": "BEN_10000",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_10001",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_10002",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_10004",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_002448",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_004946",
+              "shares": [
+                "job_card"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "draft_first": "Record BEN_10003 was flagged for review due to two issues: a potential mega family situation [E2] and clone detection [E3]. The record shows that the mobile number 9995822412 is shared by 6 other beneficiaries [E4], which could indicate identity broker/farming activities [E3]. Additionally, the family has more than 15 members, triggering the Mega Family rule [E2]. Further investigation is recommended to clarify these potential issues.",
+    "draft_final": "- \"Record BEN_10003 was flagged for review due to two issues: a potential mega family situation [E2] and clone detection [E3].\" [E2] [E3]\n\n- \"The record shows that the mobile number 9995822412 is shared by 6 other beneficiaries [E4], which could indicate identity broker/farming activities [E3].\" [E3] [E4]\n\n- \"Further investigation is recommended to clarify these potential issues [E2] [E3].\" [E2] [E3]",
+    "verification_first": {
+      "verdict": false,
+      "total": 4,
+      "unsupported": 3,
+      "sentences": [
+        {
+          "sentence": "Record BEN_10003 was flagged for review due to two issues: a potential mega family situation [E2] and clone detection [E3].",
+          "evidence_ids": [
+            "E2",
+            "E3"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 10003"
+          ]
+        },
+        {
+          "sentence": "The record shows that the mobile number 9995822412 is shared by 6 other beneficiaries [E4], which could indicate identity broker/farming activities [E3].",
+          "evidence_ids": [
+            "E4",
+            "E3"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 9995822412"
+          ]
+        },
+        {
+          "sentence": "Additionally, the family has more than 15 members, triggering the Mega Family rule [E2].",
+          "evidence_ids": [
+            "E2"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Further investigation is recommended to clarify these potential issues.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list"
+          ]
+        }
+      ]
+    },
+    "verification": {
+      "verdict": false,
+      "total": 3,
+      "unsupported": 2,
+      "sentences": [
+        {
+          "sentence": "\"Record BEN_10003 was flagged for review due to two issues: a potential mega family situation [E2] and clone detection [E3].\" [E2] [E3]",
+          "evidence_ids": [
+            "E2",
+            "E3",
+            "E2",
+            "E3"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 10003"
+          ]
+        },
+        {
+          "sentence": "\"The record shows that the mobile number 9995822412 is shared by 6 other beneficiaries [E4], which could indicate identity broker/farming activities [E3].\" [E3] [E4]",
+          "evidence_ids": [
+            "E4",
+            "E3",
+            "E3",
+            "E4"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 9995822412"
+          ]
+        },
+        {
+          "sentence": "\"Further investigation is recommended to clarify these potential issues [E2] [E3].\" [E2] [E3]",
+          "evidence_ids": [
+            "E2",
+            "E3",
+            "E2",
+            "E3"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "revisions": 2,
+    "revisions_accepted": 1,
+    "revision_rejected": true,
+    "tool_calls": 4,
+    "tool_call_log": [
+      {
+        "tool": "get_record",
+        "arguments": {
+          "record_id": "BEN_10003"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_004"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_013"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_neighbors",
+        "arguments": {
+          "record_id": "BEN_10003"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      }
+    ],
+    "status": "needs_human",
+    "mode": "llm",
+    "error": null
+  },
+  {
+    "record_id": "BEN_10004",
+    "domain": "Civil Registry",
+    "rule_ids": [
+      "RULE_004",
+      "RULE_013"
+    ],
+    "evidence": [
+      {
+        "id": "E1",
+        "tool": "get_record",
+        "text": "record BEN_10004 | domain=Civil Registry | BeneficiaryID=BEN_10004 | Name=Vedant Mann | Age=66 | Gender=M | MobileNumber=9995822412 | AadhaarHash=1A3DBC8960A9 | FamilyID=FAM_00000 | District=Naqli Nagar | JobCardID=JC_460663",
+        "arguments": {
+          "record_id": "BEN_10004"
+        },
+        "data": {
+          "record": {
+            "BeneficiaryID": "BEN_10004",
+            "Name": "Vedant Mann",
+            "Age": "66",
+            "Gender": "M",
+            "MobileNumber": "9995822412",
+            "AadhaarHash": "1A3DBC8960A9",
+            "FamilyID": "FAM_00000",
+            "District": "Naqli Nagar",
+            "JobCardID": "JC_460663"
+          },
+          "domain": "Civil Registry"
+        }
+      },
+      {
+        "id": "E2",
+        "tool": "explain_rule",
+        "text": "rule RULE_004 | name=Mega Family | domain=Civil Registry | severity=25 | description=Family has >15 members - potential ration hoarding",
+        "arguments": {
+          "rule_id": "RULE_004"
+        },
+        "data": {
+          "rule_id": "RULE_004",
+          "name": "Mega Family",
+          "domain": "Civil Registry",
+          "severity": 25,
+          "description": "Family has >15 members - potential ration hoarding"
+        }
+      },
+      {
+        "id": "E3",
+        "tool": "explain_rule",
+        "text": "rule RULE_013 | name=Clone Detection | domain=Civil Registry | severity=30 | description=Mobile number shared by >3 beneficiaries - identity broker/farming",
+        "arguments": {
+          "rule_id": "RULE_013"
+        },
+        "data": {
+          "rule_id": "RULE_013",
+          "name": "Clone Detection",
+          "domain": "Civil Registry",
+          "severity": 30,
+          "description": "Mobile number shared by >3 beneficiaries - identity broker/farming"
+        }
+      },
+      {
+        "id": "E4",
+        "tool": "get_neighbors",
+        "text": "11 neighbor record(s) for BEN_10004: BEN_10000 shares mobile; BEN_10001 shares mobile; BEN_10002 shares mobile; BEN_10003 shares mobile; CLM_000983 shares beneficiary_id; CLM_002284 shares beneficiary_id; TXN_MGN_000402 shares job_card; TXN_MGN_002296 shares job_card; TXN_MGN_003905 shares job_card; TXN_MGN_003955 shares job_card; TXN_MGN_004625 shares job_card",
+        "arguments": {
+          "record_id": "BEN_10004"
+        },
+        "data": {
+          "count": 11,
+          "neighbors": [
+            {
+              "record_id": "BEN_10000",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_10001",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_10002",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_10003",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "CLM_000983",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "CLM_002284",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_000402",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_002296",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_003905",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_003955",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_004625",
+              "shares": [
+                "job_card"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "draft_first": "Record BEN_10004 has been flagged for review due to potential issues identified by RULE_004 and RULE_013. According to the evidence, BEN_10004 is part of a family with multiple members sharing the same mobile number, which could indicate a mega family situation [E1, E2]. Additionally, the record shares job card information with multiple other records, suggesting possible clone detection [E1, E3, E4]. Further investigation is required to understand the context and ensure compliance.",
+    "draft_final": "Record BEN_10004 has been flagged for review due to potential issues identified by RULE_004 and RULE_013. According to the evidence, BEN_10004 is part of a family with multiple members sharing the same mobile number, which could indicate a mega family situation [E1, E2]. Additionally, the record shares job card information with multiple other records, suggesting possible clone detection [E1, E3, E4]. Further investigation is required to understand the context and ensure compliance.",
+    "verification_first": {
+      "verdict": false,
+      "total": 4,
+      "unsupported": 2,
+      "sentences": [
+        {
+          "sentence": "Record BEN_10004 has been flagged for review due to potential issues identified by RULE_004 and RULE_013.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 004, 013, 10004"
+          ]
+        },
+        {
+          "sentence": "According to the evidence, BEN_10004 is part of a family with multiple members sharing the same mobile number, which could indicate a mega family situation [E1, E2].",
+          "evidence_ids": [
+            "E1",
+            "E2"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Additionally, the record shares job card information with multiple other records, suggesting possible clone detection [E1, E3, E4].",
+          "evidence_ids": [
+            "E1",
+            "E3",
+            "E4"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Further investigation is required to understand the context and ensure compliance.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list"
+          ]
+        }
+      ]
+    },
+    "verification": {
+      "verdict": false,
+      "total": 4,
+      "unsupported": 2,
+      "sentences": [
+        {
+          "sentence": "Record BEN_10004 has been flagged for review due to potential issues identified by RULE_004 and RULE_013.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 004, 013, 10004"
+          ]
+        },
+        {
+          "sentence": "According to the evidence, BEN_10004 is part of a family with multiple members sharing the same mobile number, which could indicate a mega family situation [E1, E2].",
+          "evidence_ids": [
+            "E1",
+            "E2"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Additionally, the record shares job card information with multiple other records, suggesting possible clone detection [E1, E3, E4].",
+          "evidence_ids": [
+            "E1",
+            "E3",
+            "E4"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Further investigation is required to understand the context and ensure compliance.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list"
+          ]
+        }
+      ]
+    },
+    "revisions": 1,
+    "revisions_accepted": 0,
+    "revision_rejected": true,
+    "tool_calls": 4,
+    "tool_call_log": [
+      {
+        "tool": "get_record",
+        "arguments": {
+          "record_id": "BEN_10004"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_004"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_013"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_neighbors",
+        "arguments": {
+          "record_id": "BEN_10004"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      }
+    ],
+    "status": "needs_human",
+    "mode": "llm",
+    "error": null
+  },
+  {
+    "record_id": "BEN_10018",
+    "domain": "Civil Registry",
+    "rule_ids": [
+      "RULE_004",
+      "RULE_025"
+    ],
+    "evidence": [
+      {
+        "id": "E1",
+        "tool": "explain_rule",
+        "text": "rule RULE_004 | name=Mega Family | domain=Civil Registry | severity=25 | description=Family has >15 members - potential ration hoarding",
+        "arguments": {
+          "rule_id": "RULE_004"
+        },
+        "data": {
+          "rule_id": "RULE_004",
+          "name": "Mega Family",
+          "domain": "Civil Registry",
+          "severity": 25,
+          "description": "Family has >15 members - potential ration hoarding"
+        }
+      },
+      {
+        "id": "E2",
+        "tool": "explain_rule",
+        "text": "rule RULE_025 | name=Multi-Scheme Velocity | domain=Cross-Domain | severity=40 | description=Same beneficiary flagged in multiple schemes - professional fraudster",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "data": {
+          "rule_id": "RULE_025",
+          "name": "Multi-Scheme Velocity",
+          "domain": "Cross-Domain",
+          "severity": 40,
+          "description": "Same beneficiary flagged in multiple schemes - professional fraudster"
+        }
+      },
+      {
+        "id": "E3",
+        "tool": "get_record",
+        "text": "record BEN_10018 | domain=Civil Registry | BeneficiaryID=BEN_10018 | Name=Nandini Bhargava | Age=38 | Gender=O | MobileNumber=916064746 | AadhaarHash=DE8ACF36D58B | FamilyID=FAM_00000 | District=Bharpur | JobCardID=JC_656116",
+        "arguments": {
+          "record_id": "BEN_10018"
+        },
+        "data": {
+          "record": {
+            "BeneficiaryID": "BEN_10018",
+            "Name": "Nandini Bhargava",
+            "Age": "38",
+            "Gender": "O",
+            "MobileNumber": "916064746",
+            "AadhaarHash": "DE8ACF36D58B",
+            "FamilyID": "FAM_00000",
+            "District": "Bharpur",
+            "JobCardID": "JC_656116"
+          },
+          "domain": "Civil Registry"
+        }
+      },
+      {
+        "id": "E4",
+        "tool": "run_rule",
+        "text": "rule RULE_004 (Mega Family) flags record BEN_10018 | evidence={\"family_id\": \"FAM_00000\", \"family_size\": 21}",
+        "arguments": {
+          "rule_id": "RULE_004",
+          "record_id": "BEN_10018"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "family_id": "FAM_00000",
+            "family_size": 21
+          }
+        }
+      },
+      {
+        "id": "E5",
+        "tool": "run_rule",
+        "text": "rule RULE_025 (Multi-Scheme Velocity) flags record BEN_10018 | evidence={\"beneficiary_id\": \"BEN_10018\", \"domain_count\": 2, \"flagged_domains\": [\"Civil Registry\", \"PM-JAY Medical\"]}",
+        "arguments": {
+          "rule_id": "RULE_025",
+          "record_id": "BEN_10018"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "beneficiary_id": "BEN_10018",
+            "flagged_domains": [
+              "Civil Registry",
+              "PM-JAY Medical"
+            ],
+            "domain_count": 2
+          }
+        }
+      },
+      {
+        "id": "E6",
+        "tool": "get_neighbors",
+        "text": "6 neighbor record(s) for BEN_10018: CLM_001531 shares beneficiary_id; CLM_001877 shares beneficiary_id; CLM_002707 shares beneficiary_id; TXN_MGN_001332 shares job_card; TXN_MGN_001793 shares job_card; TXN_MGN_003703 shares job_card",
+        "arguments": {
+          "record_id": "BEN_10018"
+        },
+        "data": {
+          "count": 6,
+          "neighbors": [
+            {
+              "record_id": "CLM_001531",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "CLM_001877",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "CLM_002707",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_001332",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_001793",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_003703",
+              "shares": [
+                "job_card"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "draft_first": "Record BEN_10018 has been flagged for review due to two specific issues identified by the rules. Firstly, the record meets the criteria of RULE_004, indicating that the family associated with the beneficiary has 21 members, which is above the threshold of 15 members, suggesting potential ration card hoarding [E4]. Secondly, the record is flagged by RULE_025, as the beneficiary is also found in multiple schemes across different domains, specifically in the Civil Registry and PM-JAY Medical schemes [E5]. Additionally, the beneficiary is shared among multiple transaction records, further supporting the need for review [E6].",
+    "draft_final": "Record BEN_10018 has been flagged for review due to two specific issues identified by the rules. Firstly, the record meets the criteria of RULE_004, indicating that the family associated with the beneficiary has 21 members, which is above the threshold of 15 members, suggesting potential ration card hoarding [E4]. Secondly, the record is flagged by RULE_025, as the beneficiary is also found in multiple schemes across different domains, specifically in the Civil Registry and PM-JAY Medical schemes [E5]. Additionally, the beneficiary is shared among multiple transaction records, further supporting the need for review [E6].",
+    "verification_first": {
+      "verdict": false,
+      "total": 4,
+      "unsupported": 2,
+      "sentences": [
+        {
+          "sentence": "Record BEN_10018 has been flagged for review due to two specific issues identified by the rules.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 10018"
+          ]
+        },
+        {
+          "sentence": "Firstly, the record meets the criteria of RULE_004, indicating that the family associated with the beneficiary has 21 members, which is above the threshold of 15 members, suggesting potential ration card hoarding [E4].",
+          "evidence_ids": [
+            "E4"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 15"
+          ]
+        },
+        {
+          "sentence": "Secondly, the record is flagged by RULE_025, as the beneficiary is also found in multiple schemes across different domains, specifically in the Civil Registry and PM-JAY Medical schemes [E5].",
+          "evidence_ids": [
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Additionally, the beneficiary is shared among multiple transaction records, further supporting the need for review [E6].",
+          "evidence_ids": [
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "verification": {
+      "verdict": false,
+      "total": 4,
+      "unsupported": 2,
+      "sentences": [
+        {
+          "sentence": "Record BEN_10018 has been flagged for review due to two specific issues identified by the rules.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 10018"
+          ]
+        },
+        {
+          "sentence": "Firstly, the record meets the criteria of RULE_004, indicating that the family associated with the beneficiary has 21 members, which is above the threshold of 15 members, suggesting potential ration card hoarding [E4].",
+          "evidence_ids": [
+            "E4"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 15"
+          ]
+        },
+        {
+          "sentence": "Secondly, the record is flagged by RULE_025, as the beneficiary is also found in multiple schemes across different domains, specifically in the Civil Registry and PM-JAY Medical schemes [E5].",
+          "evidence_ids": [
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Additionally, the beneficiary is shared among multiple transaction records, further supporting the need for review [E6].",
+          "evidence_ids": [
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "revisions": 1,
+    "revisions_accepted": 0,
+    "revision_rejected": true,
+    "tool_calls": 6,
+    "tool_call_log": [
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_004"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_record",
+        "arguments": {
+          "record_id": "BEN_10018"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_10018",
+          "rule_id": "RULE_004"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_10018",
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_neighbors",
+        "arguments": {
+          "record_id": "BEN_10018"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      }
+    ],
+    "status": "needs_human",
+    "mode": "llm",
+    "error": null
+  },
+  {
+    "record_id": "BEN_10282",
+    "domain": "Civil Registry",
+    "rule_ids": [
+      "RULE_013",
+      "RULE_025"
+    ],
+    "evidence": [
+      {
+        "id": "E1",
+        "tool": "get_record",
+        "text": "record BEN_10282 | domain=Civil Registry | BeneficiaryID=BEN_10282 | Name=Jagrati Tripathi | Age=42 | Gender=O | MobileNumber=9744233394 | AadhaarHash=DA58A25D6B29 | FamilyID=FAM_00111 | District=Ghotala | JobCardID=JC_685997",
+        "arguments": {
+          "record_id": "BEN_10282"
+        },
+        "data": {
+          "record": {
+            "BeneficiaryID": "BEN_10282",
+            "Name": "Jagrati Tripathi",
+            "Age": "42",
+            "Gender": "O",
+            "MobileNumber": "9744233394",
+            "AadhaarHash": "DA58A25D6B29",
+            "FamilyID": "FAM_00111",
+            "District": "Ghotala",
+            "JobCardID": "JC_685997"
+          },
+          "domain": "Civil Registry"
+        }
+      },
+      {
+        "id": "E2",
+        "tool": "explain_rule",
+        "text": "rule RULE_013 | name=Clone Detection | domain=Civil Registry | severity=30 | description=Mobile number shared by >3 beneficiaries - identity broker/farming",
+        "arguments": {
+          "rule_id": "RULE_013"
+        },
+        "data": {
+          "rule_id": "RULE_013",
+          "name": "Clone Detection",
+          "domain": "Civil Registry",
+          "severity": 30,
+          "description": "Mobile number shared by >3 beneficiaries - identity broker/farming"
+        }
+      },
+      {
+        "id": "E3",
+        "tool": "explain_rule",
+        "text": "rule RULE_025 | name=Multi-Scheme Velocity | domain=Cross-Domain | severity=40 | description=Same beneficiary flagged in multiple schemes - professional fraudster",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "data": {
+          "rule_id": "RULE_025",
+          "name": "Multi-Scheme Velocity",
+          "domain": "Cross-Domain",
+          "severity": 40,
+          "description": "Same beneficiary flagged in multiple schemes - professional fraudster"
+        }
+      },
+      {
+        "id": "E4",
+        "tool": "get_neighbors",
+        "text": "8 neighbor record(s) for BEN_10282: BEN_10051 shares mobile; BEN_10944 shares mobile; BEN_11239 shares mobile; BEN_11750 shares mobile; CLM_001563 shares beneficiary_id; CLM_001638 shares beneficiary_id; CLM_MILL_00_000 shares beneficiary_id; TXN_MGN_000780 shares job_card",
+        "arguments": {
+          "record_id": "BEN_10282"
+        },
+        "data": {
+          "count": 8,
+          "neighbors": [
+            {
+              "record_id": "BEN_10051",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_10944",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_11239",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_11750",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "CLM_001563",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "CLM_001638",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "CLM_MILL_00_000",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_000780",
+              "shares": [
+                "job_card"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "draft_first": "Record BEN_10282 was flagged for review due to potential identity farming and professional fraudster activities. The record shows that the mobile number 9744233394 is shared by more than three beneficiaries, triggering the Clone Detection rule [E2]. Additionally, the beneficiary is flagged in multiple schemes, as indicated by the sharing of the beneficiary ID with other records [E3] and [E4]. Further investigation is recommended to verify the legitimacy of these shared identifiers. [E1][E2][E3][E4]",
+    "draft_final": "Record BEN_10282 was flagged for review due to potential identity farming, as indicated by RULE_013 [E2]. The record shows that the mobile number shared by BeneficiaryID BEN_10282 (9744233394) is shared by more than three beneficiaries, triggering the Clone Detection rule [E2]. Further investigation is recommended to verify the legitimacy of these shared identifiers, as evidenced by the multiple beneficiary IDs sharing the same mobile number [E1]. [E1][E2]",
+    "verification_first": {
+      "verdict": false,
+      "total": 5,
+      "unsupported": 3,
+      "sentences": [
+        {
+          "sentence": "Record BEN_10282 was flagged for review due to potential identity farming and professional fraudster activities.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 10282"
+          ]
+        },
+        {
+          "sentence": "The record shows that the mobile number 9744233394 is shared by more than three beneficiaries, triggering the Clone Detection rule [E2].",
+          "evidence_ids": [
+            "E2"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 9744233394"
+          ]
+        },
+        {
+          "sentence": "Additionally, the beneficiary is flagged in multiple schemes, as indicated by the sharing of the beneficiary ID with other records [E3] and [E4].",
+          "evidence_ids": [
+            "E3",
+            "E4"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Further investigation is recommended to verify the legitimacy of these shared identifiers.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list"
+          ]
+        },
+        {
+          "sentence": "[E1][E2][E3][E4]",
+          "evidence_ids": [
+            "E1",
+            "E2",
+            "E3",
+            "E4"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "verification": {
+      "verdict": false,
+      "total": 4,
+      "unsupported": 2,
+      "sentences": [
+        {
+          "sentence": "Record BEN_10282 was flagged for review due to potential identity farming, as indicated by RULE_013 [E2].",
+          "evidence_ids": [
+            "E2"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 10282"
+          ]
+        },
+        {
+          "sentence": "The record shows that the mobile number shared by BeneficiaryID BEN_10282 (9744233394) is shared by more than three beneficiaries, triggering the Clone Detection rule [E2].",
+          "evidence_ids": [
+            "E2"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 10282, 9744233394"
+          ]
+        },
+        {
+          "sentence": "Further investigation is recommended to verify the legitimacy of these shared identifiers, as evidenced by the multiple beneficiary IDs sharing the same mobile number [E1].",
+          "evidence_ids": [
+            "E1"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "[E1][E2]",
+          "evidence_ids": [
+            "E1",
+            "E2"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "revisions": 2,
+    "revisions_accepted": 1,
+    "revision_rejected": true,
+    "tool_calls": 4,
+    "tool_call_log": [
+      {
+        "tool": "get_record",
+        "arguments": {
+          "record_id": "BEN_10282"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_013"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_neighbors",
+        "arguments": {
+          "record_id": "BEN_10282"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      }
+    ],
+    "status": "needs_human",
+    "mode": "llm",
+    "error": null
+  },
+  {
+    "record_id": "BEN_10594",
+    "domain": "Civil Registry",
+    "rule_ids": [
+      "RULE_002",
+      "RULE_025"
+    ],
+    "evidence": [
+      {
+        "id": "E1",
+        "tool": "get_record",
+        "text": "record BEN_10594 | domain=Civil Registry | BeneficiaryID=BEN_10594 | Name=Ojasvi Ahuja | Age=17 | Gender=F | MobileNumber=917548214 | AadhaarHash=479757207246 | FamilyID=FAM_00079 | District=Bharpur | JobCardID=JC_989136",
+        "arguments": {
+          "record_id": "BEN_10594"
+        },
+        "data": {
+          "record": {
+            "BeneficiaryID": "BEN_10594",
+            "Name": "Ojasvi Ahuja",
+            "Age": "17",
+            "Gender": "F",
+            "MobileNumber": "917548214",
+            "AadhaarHash": "479757207246",
+            "FamilyID": "FAM_00079",
+            "District": "Bharpur",
+            "JobCardID": "JC_989136"
+          },
+          "domain": "Civil Registry"
+        }
+      },
+      {
+        "id": "E2",
+        "tool": "explain_rule",
+        "text": "rule RULE_002 | name=Underage with Job Card | domain=Civil Registry | severity=25 | description=Minor (<18) has Job Card - MGNREGA violation",
+        "arguments": {
+          "rule_id": "RULE_002"
+        },
+        "data": {
+          "rule_id": "RULE_002",
+          "name": "Underage with Job Card",
+          "domain": "Civil Registry",
+          "severity": 25,
+          "description": "Minor (<18) has Job Card - MGNREGA violation"
+        }
+      },
+      {
+        "id": "E3",
+        "tool": "explain_rule",
+        "text": "rule RULE_025 | name=Multi-Scheme Velocity | domain=Cross-Domain | severity=40 | description=Same beneficiary flagged in multiple schemes - professional fraudster",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "data": {
+          "rule_id": "RULE_025",
+          "name": "Multi-Scheme Velocity",
+          "domain": "Cross-Domain",
+          "severity": 40,
+          "description": "Same beneficiary flagged in multiple schemes - professional fraudster"
+        }
+      },
+      {
+        "id": "E4",
+        "tool": "run_rule",
+        "text": "rule RULE_002 (Underage with Job Card) flags record BEN_10594 | evidence={\"age\": 17, \"job_card_id\": \"JC_989136\"}",
+        "arguments": {
+          "rule_id": "RULE_002",
+          "record_id": "BEN_10594"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "age": 17,
+            "job_card_id": "JC_989136"
+          }
+        }
+      },
+      {
+        "id": "E5",
+        "tool": "run_rule",
+        "text": "rule RULE_025 (Multi-Scheme Velocity) flags record BEN_10594 | evidence={\"beneficiary_id\": \"BEN_10594\", \"domain_count\": 2, \"flagged_domains\": [\"Civil Registry\", \"MGNREGA Labor\"]}",
+        "arguments": {
+          "rule_id": "RULE_025",
+          "record_id": "BEN_10594"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "beneficiary_id": "BEN_10594",
+            "flagged_domains": [
+              "Civil Registry",
+              "MGNREGA Labor"
+            ],
+            "domain_count": 2
+          }
+        }
+      },
+      {
+        "id": "E6",
+        "tool": "get_neighbors",
+        "text": "8 neighbor record(s) for BEN_10594: CLM_002781 shares beneficiary_id; TXN_MGN_000916 shares job_card; TXN_MGN_001906 shares job_card; TXN_MGN_002036 shares job_card; TXN_MGN_003296 shares job_card; TXN_MGN_003470 shares job_card; TXN_MGN_004493 shares job_card; TXN_MGN_004907 shares job_card",
+        "arguments": {
+          "record_id": "BEN_10594"
+        },
+        "data": {
+          "count": 8,
+          "neighbors": [
+            {
+              "record_id": "CLM_002781",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_000916",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_001906",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_002036",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_003296",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_003470",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_004493",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_004907",
+              "shares": [
+                "job_card"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "draft_first": "Record BEN_10594 was flagged for review due to two issues: the individual is a minor (17 years old) with a Job Card, which violates MGNREGA rules [E4] (RULE_002), and the beneficiary is flagged in multiple schemes, suggesting potential professional fraudster activity [E5] (RULE_025). Additionally, the record has connections to multiple transactions in the MGNREGA Labor domain [E6]. Further investigation is recommended.",
+    "draft_final": "Record BEN_10594 was flagged for review due to two issues: the individual is a minor (17 years old) with a Job Card, which violates MGNREGA rules [E4] (RULE_002), and the beneficiary is flagged in multiple schemes, suggesting potential professional fraudster activity [E5] (RULE_025). Additionally, the record has connections to multiple transactions in the MGNREGA Labor domain [E6]. Further investigation is recommended based on these findings [E4, E5, E6].",
+    "verification_first": {
+      "verdict": false,
+      "total": 3,
+      "unsupported": 1,
+      "sentences": [
+        {
+          "sentence": "Record BEN_10594 was flagged for review due to two issues: the individual is a minor (17 years old) with a Job Card, which violates MGNREGA rules [E4] (RULE_002), and the beneficiary is flagged in multiple schemes, suggesting potential professional fraudster activity [E5] (RULE_025).",
+          "evidence_ids": [
+            "E4",
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Additionally, the record has connections to multiple transactions in the MGNREGA Labor domain [E6].",
+          "evidence_ids": [
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Further investigation is recommended.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list"
+          ]
+        }
+      ]
+    },
+    "verification": {
+      "verdict": true,
+      "total": 3,
+      "unsupported": 0,
+      "sentences": [
+        {
+          "sentence": "Record BEN_10594 was flagged for review due to two issues: the individual is a minor (17 years old) with a Job Card, which violates MGNREGA rules [E4] (RULE_002), and the beneficiary is flagged in multiple schemes, suggesting potential professional fraudster activity [E5] (RULE_025).",
+          "evidence_ids": [
+            "E4",
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Additionally, the record has connections to multiple transactions in the MGNREGA Labor domain [E6].",
+          "evidence_ids": [
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Further investigation is recommended based on these findings [E4, E5, E6].",
+          "evidence_ids": [
+            "E4",
+            "E5",
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "revisions": 1,
+    "revisions_accepted": 1,
+    "revision_rejected": false,
+    "tool_calls": 6,
+    "tool_call_log": [
+      {
+        "tool": "get_record",
+        "arguments": {
+          "record_id": "BEN_10594"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_002"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_10594",
+          "rule_id": "RULE_002"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_10594",
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_neighbors",
+        "arguments": {
+          "record_id": "BEN_10594"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      }
+    ],
+    "status": "verified",
+    "mode": "llm",
+    "error": null
+  },
+  {
+    "record_id": "BEN_10629",
+    "domain": "Civil Registry",
+    "rule_ids": [
+      "RULE_004",
+      "RULE_025"
+    ],
+    "evidence": [
+      {
+        "id": "E1",
+        "tool": "explain_rule",
+        "text": "rule RULE_004 | name=Mega Family | domain=Civil Registry | severity=25 | description=Family has >15 members - potential ration hoarding",
+        "arguments": {
+          "rule_id": "RULE_004"
+        },
+        "data": {
+          "rule_id": "RULE_004",
+          "name": "Mega Family",
+          "domain": "Civil Registry",
+          "severity": 25,
+          "description": "Family has >15 members - potential ration hoarding"
+        }
+      },
+      {
+        "id": "E2",
+        "tool": "explain_rule",
+        "text": "rule RULE_025 | name=Multi-Scheme Velocity | domain=Cross-Domain | severity=40 | description=Same beneficiary flagged in multiple schemes - professional fraudster",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "data": {
+          "rule_id": "RULE_025",
+          "name": "Multi-Scheme Velocity",
+          "domain": "Cross-Domain",
+          "severity": 40,
+          "description": "Same beneficiary flagged in multiple schemes - professional fraudster"
+        }
+      },
+      {
+        "id": "E3",
+        "tool": "get_record",
+        "text": "record BEN_10629 | domain=Civil Registry | BeneficiaryID=BEN_10629 | Name=Diya Ahluwalia | Age=64 | Gender=F | MobileNumber=0351903613 | AadhaarHash=96EFB97E6703 | FamilyID=FAM_00000 | District=Naqli Nagar | JobCardID=JC_516379",
+        "arguments": {
+          "record_id": "BEN_10629"
+        },
+        "data": {
+          "record": {
+            "BeneficiaryID": "BEN_10629",
+            "Name": "Diya Ahluwalia",
+            "Age": "64",
+            "Gender": "F",
+            "MobileNumber": "0351903613",
+            "AadhaarHash": "96EFB97E6703",
+            "FamilyID": "FAM_00000",
+            "District": "Naqli Nagar",
+            "JobCardID": "JC_516379"
+          },
+          "domain": "Civil Registry"
+        }
+      },
+      {
+        "id": "E4",
+        "tool": "run_rule",
+        "text": "rule RULE_004 (Mega Family) flags record BEN_10629 | evidence={\"family_id\": \"FAM_00000\", \"family_size\": 21}",
+        "arguments": {
+          "rule_id": "RULE_004",
+          "record_id": "BEN_10629"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "family_id": "FAM_00000",
+            "family_size": 21
+          }
+        }
+      },
+      {
+        "id": "E5",
+        "tool": "run_rule",
+        "text": "rule RULE_025 (Multi-Scheme Velocity) flags record BEN_10629 | evidence={\"beneficiary_id\": \"BEN_10629\", \"domain_count\": 2, \"flagged_domains\": [\"Civil Registry\", \"MGNREGA Labor\"]}",
+        "arguments": {
+          "rule_id": "RULE_025",
+          "record_id": "BEN_10629"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "beneficiary_id": "BEN_10629",
+            "flagged_domains": [
+              "Civil Registry",
+              "MGNREGA Labor"
+            ],
+            "domain_count": 2
+          }
+        }
+      },
+      {
+        "id": "E6",
+        "tool": "get_neighbors",
+        "text": "6 neighbor record(s) for BEN_10629: CLM_001704 shares beneficiary_id; TXN_MGN_001176 shares job_card; TXN_MGN_001905 shares job_card; TXN_MGN_002344 shares job_card; TXN_MGN_002729 shares job_card; TXN_MGN_003601 shares job_card",
+        "arguments": {
+          "record_id": "BEN_10629"
+        },
+        "data": {
+          "count": 6,
+          "neighbors": [
+            {
+              "record_id": "CLM_001704",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_001176",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_001905",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_002344",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_002729",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_003601",
+              "shares": [
+                "job_card"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "draft_first": "Record BEN_10629, flagged for review due to two specific rules. Rule RULE_004, identified as \"Mega Family,\" flagged this record because the family associated with BeneficiaryID BEN_10629 has 21 members, which exceeds the threshold of 15 members [E4]. Additionally, Rule RULE_025, \"Multi-Scheme Velocity,\" flagged the record as the beneficiary is involved in multiple schemes across different domains, specifically in the Civil Registry and MGNREGA Labor domains [E5]. The record also shares job card information with multiple transactions, indicating potential involvement in multiple schemes [E6].",
+    "draft_final": "Record BEN_10629, flagged for review due to two specific rules. Rule RULE_004, identified as \"Mega Family,\" flagged this record because the family associated with BeneficiaryID BEN_10629 has 21 members, which exceeds the threshold of 15 members [E4]. Additionally, Rule RULE_025, \"Multi-Scheme Velocity,\" flagged the record as the beneficiary is involved in multiple schemes across different domains, specifically in the Civil Registry and MGNREGA Labor domains [E5]. The record also shares job card information with multiple transactions, indicating potential involvement in multiple schemes [E6].",
+    "verification_first": {
+      "verdict": false,
+      "total": 4,
+      "unsupported": 2,
+      "sentences": [
+        {
+          "sentence": "Record BEN_10629, flagged for review due to two specific rules.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 10629"
+          ]
+        },
+        {
+          "sentence": "Rule RULE_004, identified as \"Mega Family,\" flagged this record because the family associated with BeneficiaryID BEN_10629 has 21 members, which exceeds the threshold of 15 members [E4].",
+          "evidence_ids": [
+            "E4"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 15"
+          ]
+        },
+        {
+          "sentence": "Additionally, Rule RULE_025, \"Multi-Scheme Velocity,\" flagged the record as the beneficiary is involved in multiple schemes across different domains, specifically in the Civil Registry and MGNREGA Labor domains [E5].",
+          "evidence_ids": [
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "The record also shares job card information with multiple transactions, indicating potential involvement in multiple schemes [E6].",
+          "evidence_ids": [
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "verification": {
+      "verdict": false,
+      "total": 4,
+      "unsupported": 2,
+      "sentences": [
+        {
+          "sentence": "Record BEN_10629, flagged for review due to two specific rules.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 10629"
+          ]
+        },
+        {
+          "sentence": "Rule RULE_004, identified as \"Mega Family,\" flagged this record because the family associated with BeneficiaryID BEN_10629 has 21 members, which exceeds the threshold of 15 members [E4].",
+          "evidence_ids": [
+            "E4"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 15"
+          ]
+        },
+        {
+          "sentence": "Additionally, Rule RULE_025, \"Multi-Scheme Velocity,\" flagged the record as the beneficiary is involved in multiple schemes across different domains, specifically in the Civil Registry and MGNREGA Labor domains [E5].",
+          "evidence_ids": [
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "The record also shares job card information with multiple transactions, indicating potential involvement in multiple schemes [E6].",
+          "evidence_ids": [
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "revisions": 1,
+    "revisions_accepted": 0,
+    "revision_rejected": true,
+    "tool_calls": 6,
+    "tool_call_log": [
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_004"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_record",
+        "arguments": {
+          "record_id": "BEN_10629"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_10629",
+          "rule_id": "RULE_004"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_10629",
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_neighbors",
+        "arguments": {
+          "record_id": "BEN_10629"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      }
+    ],
+    "status": "needs_human",
+    "mode": "llm",
+    "error": null
+  },
+  {
+    "record_id": "BEN_10887",
+    "domain": "Civil Registry",
+    "rule_ids": [
+      "RULE_001",
+      "RULE_025"
+    ],
+    "evidence": [
+      {
+        "id": "E1",
+        "tool": "get_record",
+        "text": "record BEN_10887 | domain=Civil Registry | BeneficiaryID=BEN_10887 | Name=Charan Sodhi | Age=41 | Gender=O | MobileNumber=9999999999 | AadhaarHash=F1FA711533F3 | FamilyID=FAM_00069 | District=Naqli Nagar | JobCardID=JC_772240",
+        "arguments": {
+          "record_id": "BEN_10887"
+        },
+        "data": {
+          "record": {
+            "BeneficiaryID": "BEN_10887",
+            "Name": "Charan Sodhi",
+            "Age": "41",
+            "Gender": "O",
+            "MobileNumber": "9999999999",
+            "AadhaarHash": "F1FA711533F3",
+            "FamilyID": "FAM_00069",
+            "District": "Naqli Nagar",
+            "JobCardID": "JC_772240"
+          },
+          "domain": "Civil Registry"
+        }
+      },
+      {
+        "id": "E2",
+        "tool": "explain_rule",
+        "text": "rule RULE_001 | name=Invalid Mobile Number | domain=Civil Registry | severity=25 | description=Mobile number is dummy value (9999999999) - potential data manipulation",
+        "arguments": {
+          "rule_id": "RULE_001"
+        },
+        "data": {
+          "rule_id": "RULE_001",
+          "name": "Invalid Mobile Number",
+          "domain": "Civil Registry",
+          "severity": 25,
+          "description": "Mobile number is dummy value (9999999999) - potential data manipulation"
+        }
+      },
+      {
+        "id": "E3",
+        "tool": "explain_rule",
+        "text": "rule RULE_025 | name=Multi-Scheme Velocity | domain=Cross-Domain | severity=40 | description=Same beneficiary flagged in multiple schemes - professional fraudster",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "data": {
+          "rule_id": "RULE_025",
+          "name": "Multi-Scheme Velocity",
+          "domain": "Cross-Domain",
+          "severity": 40,
+          "description": "Same beneficiary flagged in multiple schemes - professional fraudster"
+        }
+      },
+      {
+        "id": "E4",
+        "tool": "get_neighbors",
+        "text": "13 neighbor record(s) for BEN_10887: BEN_10664 shares mobile; BEN_10752 shares mobile; BEN_11089 shares mobile; BEN_11107 shares mobile; BEN_11162 shares mobile; BEN_11167 shares mobile; BEN_11220 shares mobile; BEN_11715 shares mobile; BEN_11747 shares mobile; CLM_002788 shares beneficiary_id; TXN_MGN_001082 shares job_card; TXN_MGN_002183 shares job_card; TXN_MGN_004689 shares job_card",
+        "arguments": {
+          "record_id": "BEN_10887"
+        },
+        "data": {
+          "count": 13,
+          "neighbors": [
+            {
+              "record_id": "BEN_10664",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_10752",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_11089",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_11107",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_11162",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_11167",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_11220",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_11715",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "BEN_11747",
+              "shares": [
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "CLM_002788",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_001082",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_002183",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_004689",
+              "shares": [
+                "job_card"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "draft_first": "Record BEN_10887 was flagged for review due to two issues: a potential data manipulation as indicated by the invalid mobile number [E2], and involvement in multiple schemes as suggested by RULE_025 [E3]. Additionally, the record shares mobile numbers with 13 other records [E4], which may indicate further review is needed.",
+    "draft_final": "Record BEN_10887 was flagged for review due to two issues: a potential data manipulation as indicated by the invalid mobile number [E2], and involvement in multiple schemes as suggested by RULE_025 [E3]. Additionally, the record shares mobile numbers with 13 other records [E4], which may indicate further review is needed.",
+    "verification_first": {
+      "verdict": false,
+      "total": 2,
+      "unsupported": 1,
+      "sentences": [
+        {
+          "sentence": "Record BEN_10887 was flagged for review due to two issues: a potential data manipulation as indicated by the invalid mobile number [E2], and involvement in multiple schemes as suggested by RULE_025 [E3].",
+          "evidence_ids": [
+            "E2",
+            "E3"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 10887"
+          ]
+        },
+        {
+          "sentence": "Additionally, the record shares mobile numbers with 13 other records [E4], which may indicate further review is needed.",
+          "evidence_ids": [
+            "E4"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "verification": {
+      "verdict": false,
+      "total": 2,
+      "unsupported": 1,
+      "sentences": [
+        {
+          "sentence": "Record BEN_10887 was flagged for review due to two issues: a potential data manipulation as indicated by the invalid mobile number [E2], and involvement in multiple schemes as suggested by RULE_025 [E3].",
+          "evidence_ids": [
+            "E2",
+            "E3"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 10887"
+          ]
+        },
+        {
+          "sentence": "Additionally, the record shares mobile numbers with 13 other records [E4], which may indicate further review is needed.",
+          "evidence_ids": [
+            "E4"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "revisions": 1,
+    "revisions_accepted": 0,
+    "revision_rejected": true,
+    "tool_calls": 4,
+    "tool_call_log": [
+      {
+        "tool": "get_record",
+        "arguments": {
+          "record_id": "BEN_10887"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_001"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_neighbors",
+        "arguments": {
+          "record_id": "BEN_10887"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      }
+    ],
+    "status": "needs_human",
+    "mode": "llm",
+    "error": null
+  },
+  {
+    "record_id": "BEN_11832",
+    "domain": "Civil Registry",
+    "rule_ids": [
+      "RULE_003",
+      "RULE_025"
+    ],
+    "evidence": [
+      {
+        "id": "E1",
+        "tool": "explain_rule",
+        "text": "rule RULE_003 | name=Suspicious Age | domain=Civil Registry | severity=25 | description=Age >100 years - potential ghost beneficiary",
+        "arguments": {
+          "rule_id": "RULE_003"
+        },
+        "data": {
+          "rule_id": "RULE_003",
+          "name": "Suspicious Age",
+          "domain": "Civil Registry",
+          "severity": 25,
+          "description": "Age >100 years - potential ghost beneficiary"
+        }
+      },
+      {
+        "id": "E2",
+        "tool": "explain_rule",
+        "text": "rule RULE_025 | name=Multi-Scheme Velocity | domain=Cross-Domain | severity=40 | description=Same beneficiary flagged in multiple schemes - professional fraudster",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "data": {
+          "rule_id": "RULE_025",
+          "name": "Multi-Scheme Velocity",
+          "domain": "Cross-Domain",
+          "severity": 40,
+          "description": "Same beneficiary flagged in multiple schemes - professional fraudster"
+        }
+      },
+      {
+        "id": "E3",
+        "tool": "get_record",
+        "text": "record BEN_11832 | domain=Civil Registry | BeneficiaryID=BEN_11832 | Name=Omisha Deo | Age=116 | Gender=M | MobileNumber=910397440 | AadhaarHash=BFBEEFC59738 | FamilyID=FAM_00357 | District=Bharpur | JobCardID=JC_484487",
+        "arguments": {
+          "record_id": "BEN_11832"
+        },
+        "data": {
+          "record": {
+            "BeneficiaryID": "BEN_11832",
+            "Name": "Omisha Deo",
+            "Age": "116",
+            "Gender": "M",
+            "MobileNumber": "910397440",
+            "AadhaarHash": "BFBEEFC59738",
+            "FamilyID": "FAM_00357",
+            "District": "Bharpur",
+            "JobCardID": "JC_484487"
+          },
+          "domain": "Civil Registry"
+        }
+      },
+      {
+        "id": "E4",
+        "tool": "run_rule",
+        "text": "rule RULE_003 (Suspicious Age) flags record BEN_11832 | evidence={\"age\": 116}",
+        "arguments": {
+          "rule_id": "RULE_003",
+          "record_id": "BEN_11832"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "age": 116
+          }
+        }
+      },
+      {
+        "id": "E5",
+        "tool": "run_rule",
+        "text": "rule RULE_025 (Multi-Scheme Velocity) flags record BEN_11832 | evidence={\"beneficiary_id\": \"BEN_11832\", \"domain_count\": 2, \"flagged_domains\": [\"Civil Registry\", \"MGNREGA Labor\"]}",
+        "arguments": {
+          "rule_id": "RULE_025",
+          "record_id": "BEN_11832"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "beneficiary_id": "BEN_11832",
+            "flagged_domains": [
+              "Civil Registry",
+              "MGNREGA Labor"
+            ],
+            "domain_count": 2
+          }
+        }
+      },
+      {
+        "id": "E6",
+        "tool": "get_neighbors",
+        "text": "3 neighbor record(s) for BEN_11832: TXN_MGN_000067 shares job_card; TXN_MGN_002130 shares job_card; TXN_MGN_002234 shares job_card",
+        "arguments": {
+          "record_id": "BEN_11832"
+        },
+        "data": {
+          "count": 3,
+          "neighbors": [
+            {
+              "record_id": "TXN_MGN_000067",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_002130",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_002234",
+              "shares": [
+                "job_card"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "draft_first": "Record BEN_11832 has been flagged for review due to two specific issues identified by the audit rules. Firstly, the record triggers RULE_003, which identifies a suspicious age of 116 years [E4], indicating a potential ghost beneficiary. Secondly, it also triggers RULE_025, highlighting that the beneficiary is flagged in multiple schemes, suggesting possible professional fraudster activity [E5]. Additionally, the record shares a job card with other transactions, further supporting the need for review [E6].",
+    "draft_final": "Record BEN_11832 has been flagged for review due to two specific issues identified by the audit rules. Firstly, the record triggers RULE_003, which identifies a suspicious age of 116 years [E4], indicating a potential ghost beneficiary. Secondly, it also triggers RULE_025, highlighting that the beneficiary is flagged in multiple schemes, suggesting possible professional fraudster activity [E5]. Additionally, the record shares a job card with other transactions, further supporting the need for review [E6].",
+    "verification_first": {
+      "verdict": false,
+      "total": 4,
+      "unsupported": 1,
+      "sentences": [
+        {
+          "sentence": "Record BEN_11832 has been flagged for review due to two specific issues identified by the audit rules.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 11832"
+          ]
+        },
+        {
+          "sentence": "Firstly, the record triggers RULE_003, which identifies a suspicious age of 116 years [E4], indicating a potential ghost beneficiary.",
+          "evidence_ids": [
+            "E4"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Secondly, it also triggers RULE_025, highlighting that the beneficiary is flagged in multiple schemes, suggesting possible professional fraudster activity [E5].",
+          "evidence_ids": [
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Additionally, the record shares a job card with other transactions, further supporting the need for review [E6].",
+          "evidence_ids": [
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "verification": {
+      "verdict": false,
+      "total": 4,
+      "unsupported": 1,
+      "sentences": [
+        {
+          "sentence": "Record BEN_11832 has been flagged for review due to two specific issues identified by the audit rules.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 11832"
+          ]
+        },
+        {
+          "sentence": "Firstly, the record triggers RULE_003, which identifies a suspicious age of 116 years [E4], indicating a potential ghost beneficiary.",
+          "evidence_ids": [
+            "E4"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Secondly, it also triggers RULE_025, highlighting that the beneficiary is flagged in multiple schemes, suggesting possible professional fraudster activity [E5].",
+          "evidence_ids": [
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Additionally, the record shares a job card with other transactions, further supporting the need for review [E6].",
+          "evidence_ids": [
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "revisions": 1,
+    "revisions_accepted": 0,
+    "revision_rejected": true,
+    "tool_calls": 6,
+    "tool_call_log": [
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_003"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_record",
+        "arguments": {
+          "record_id": "BEN_11832"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "rule_id": "RULE_003",
+          "record_id": "BEN_11832"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_11832",
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_neighbors",
+        "arguments": {
+          "record_id": "BEN_11832"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      }
+    ],
+    "status": "needs_human",
+    "mode": "llm",
+    "error": null
+  },
+  {
+    "record_id": "BEN_CS_0000",
+    "domain": "Civil Registry",
+    "rule_ids": [
+      "RULE_002",
+      "RULE_025"
+    ],
+    "evidence": [
+      {
+        "id": "E1",
+        "tool": "explain_rule",
+        "text": "rule RULE_002 | name=Underage with Job Card | domain=Civil Registry | severity=25 | description=Minor (<18) has Job Card - MGNREGA violation",
+        "arguments": {
+          "rule_id": "RULE_002"
+        },
+        "data": {
+          "rule_id": "RULE_002",
+          "name": "Underage with Job Card",
+          "domain": "Civil Registry",
+          "severity": 25,
+          "description": "Minor (<18) has Job Card - MGNREGA violation"
+        }
+      },
+      {
+        "id": "E2",
+        "tool": "explain_rule",
+        "text": "rule RULE_025 | name=Multi-Scheme Velocity | domain=Cross-Domain | severity=40 | description=Same beneficiary flagged in multiple schemes - professional fraudster",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "data": {
+          "rule_id": "RULE_025",
+          "name": "Multi-Scheme Velocity",
+          "domain": "Cross-Domain",
+          "severity": 40,
+          "description": "Same beneficiary flagged in multiple schemes - professional fraudster"
+        }
+      },
+      {
+        "id": "E3",
+        "tool": "get_record",
+        "text": "record BEN_CS_0000 | domain=Civil Registry | BeneficiaryID=BEN_CS_0000 | Name=Wriddhish Kohli | Age=10 | Gender=M | MobileNumber=9876585747 | AadhaarHash=FC5624ACB722 | FamilyID=FAM_CS_0000 | District=Naqli Nagar | JobCardID=JC_CS_0000",
+        "arguments": {
+          "record_id": "BEN_CS_0000"
+        },
+        "data": {
+          "record": {
+            "BeneficiaryID": "BEN_CS_0000",
+            "Name": "Wriddhish Kohli",
+            "Age": "10",
+            "Gender": "M",
+            "MobileNumber": "9876585747",
+            "AadhaarHash": "FC5624ACB722",
+            "FamilyID": "FAM_CS_0000",
+            "District": "Naqli Nagar",
+            "JobCardID": "JC_CS_0000"
+          },
+          "domain": "Civil Registry"
+        }
+      },
+      {
+        "id": "E4",
+        "tool": "run_rule",
+        "text": "rule RULE_002 (Underage with Job Card) flags record BEN_CS_0000 | evidence={\"age\": 10, \"job_card_id\": \"JC_CS_0000\"}",
+        "arguments": {
+          "rule_id": "RULE_002",
+          "record_id": "BEN_CS_0000"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "age": 10,
+            "job_card_id": "JC_CS_0000"
+          }
+        }
+      },
+      {
+        "id": "E5",
+        "tool": "run_rule",
+        "text": "rule RULE_025 (Multi-Scheme Velocity) flags record BEN_CS_0000 | evidence={\"beneficiary_id\": \"BEN_CS_0000\", \"domain_count\": 2, \"flagged_domains\": [\"Civil Registry\", \"MGNREGA Labor\"]}",
+        "arguments": {
+          "rule_id": "RULE_025",
+          "record_id": "BEN_CS_0000"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "beneficiary_id": "BEN_CS_0000",
+            "flagged_domains": [
+              "Civil Registry",
+              "MGNREGA Labor"
+            ],
+            "domain_count": 2
+          }
+        }
+      },
+      {
+        "id": "E6",
+        "tool": "get_neighbors",
+        "text": "7 neighbor record(s) for BEN_CS_0000: CLM_000690 shares beneficiary_id; CLM_001624 shares beneficiary_id; CLM_001682 shares beneficiary_id; CLM_002282 shares beneficiary_id; CLM_002639 shares beneficiary_id; CLM_002903 shares beneficiary_id; TXN_MGN_CS_BEN_CS_0000 shares job_card",
+        "arguments": {
+          "record_id": "BEN_CS_0000"
+        },
+        "data": {
+          "count": 7,
+          "neighbors": [
+            {
+              "record_id": "CLM_000690",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "CLM_001624",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "CLM_001682",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "CLM_002282",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "CLM_002639",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "CLM_002903",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_CS_BEN_CS_0000",
+              "shares": [
+                "job_card"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "draft_first": "Record BEN_CS_0000 has been flagged for review due to two specific issues as per the rules applied. Firstly, the record violates RULE_002, which indicates that a minor (age 10) has a Job Card, suggesting a potential MGNREGA violation [E4]. Secondly, the record is flagged by RULE_025 for being involved in multiple schemes, indicating that the beneficiary is also present in the MGNREGA Labor scheme [E5]. Additionally, the record shares a beneficiary ID with multiple other records, and is linked to a job card in another scheme [E6]. Further investigation is recommended to understand the context and ensure compliance.",
+    "draft_final": "Record BEN_CS_0000 has been flagged for review due to two specific issues as per the rules applied [E1, E2]. Firstly, the record violates RULE_002, which indicates that a minor (age 10) has a Job Card, suggesting a potential MGNREGA violation [E4]. Secondly, the record is flagged by RULE_025 for being involved in multiple schemes, indicating that the beneficiary is also present in the MGNREGA Labor scheme [E5]. Further investigation is recommended to understand the context and ensure compliance, based on the evidence of multiple scheme involvement [E5].",
+    "verification_first": {
+      "verdict": false,
+      "total": 5,
+      "unsupported": 2,
+      "sentences": [
+        {
+          "sentence": "Record BEN_CS_0000 has been flagged for review due to two specific issues as per the rules applied.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 0000"
+          ]
+        },
+        {
+          "sentence": "Firstly, the record violates RULE_002, which indicates that a minor (age 10) has a Job Card, suggesting a potential MGNREGA violation [E4].",
+          "evidence_ids": [
+            "E4"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Secondly, the record is flagged by RULE_025 for being involved in multiple schemes, indicating that the beneficiary is also present in the MGNREGA Labor scheme [E5].",
+          "evidence_ids": [
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Additionally, the record shares a beneficiary ID with multiple other records, and is linked to a job card in another scheme [E6].",
+          "evidence_ids": [
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Further investigation is recommended to understand the context and ensure compliance.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list"
+          ]
+        }
+      ]
+    },
+    "verification": {
+      "verdict": false,
+      "total": 4,
+      "unsupported": 1,
+      "sentences": [
+        {
+          "sentence": "Record BEN_CS_0000 has been flagged for review due to two specific issues as per the rules applied [E1, E2].",
+          "evidence_ids": [
+            "E1",
+            "E2"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 0000"
+          ]
+        },
+        {
+          "sentence": "Firstly, the record violates RULE_002, which indicates that a minor (age 10) has a Job Card, suggesting a potential MGNREGA violation [E4].",
+          "evidence_ids": [
+            "E4"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Secondly, the record is flagged by RULE_025 for being involved in multiple schemes, indicating that the beneficiary is also present in the MGNREGA Labor scheme [E5].",
+          "evidence_ids": [
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Further investigation is recommended to understand the context and ensure compliance, based on the evidence of multiple scheme involvement [E5].",
+          "evidence_ids": [
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "revisions": 2,
+    "revisions_accepted": 1,
+    "revision_rejected": true,
+    "tool_calls": 6,
+    "tool_call_log": [
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_002"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_record",
+        "arguments": {
+          "record_id": "BEN_CS_0000"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_CS_0000",
+          "rule_id": "RULE_002"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_CS_0000",
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_neighbors",
+        "arguments": {
+          "record_id": "BEN_CS_0000"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      }
+    ],
+    "status": "needs_human",
+    "mode": "llm",
+    "error": null
+  },
+  {
+    "record_id": "BEN_CS_0002",
+    "domain": "Civil Registry",
+    "rule_ids": [
+      "RULE_002",
+      "RULE_025"
+    ],
+    "evidence": [
+      {
+        "id": "E1",
+        "tool": "explain_rule",
+        "text": "rule RULE_002 | name=Underage with Job Card | domain=Civil Registry | severity=25 | description=Minor (<18) has Job Card - MGNREGA violation",
+        "arguments": {
+          "rule_id": "RULE_002"
+        },
+        "data": {
+          "rule_id": "RULE_002",
+          "name": "Underage with Job Card",
+          "domain": "Civil Registry",
+          "severity": 25,
+          "description": "Minor (<18) has Job Card - MGNREGA violation"
+        }
+      },
+      {
+        "id": "E2",
+        "tool": "explain_rule",
+        "text": "rule RULE_025 | name=Multi-Scheme Velocity | domain=Cross-Domain | severity=40 | description=Same beneficiary flagged in multiple schemes - professional fraudster",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "data": {
+          "rule_id": "RULE_025",
+          "name": "Multi-Scheme Velocity",
+          "domain": "Cross-Domain",
+          "severity": 40,
+          "description": "Same beneficiary flagged in multiple schemes - professional fraudster"
+        }
+      },
+      {
+        "id": "E3",
+        "tool": "get_record",
+        "text": "record BEN_CS_0002 | domain=Civil Registry | BeneficiaryID=BEN_CS_0002 | Name=Vidhi Chad | Age=8 | Gender=F | MobileNumber=9881456387 | AadhaarHash=69DF389641DD | FamilyID=FAM_CS_0002 | District=Ghotala | JobCardID=JC_CS_0002",
+        "arguments": {
+          "record_id": "BEN_CS_0002"
+        },
+        "data": {
+          "record": {
+            "BeneficiaryID": "BEN_CS_0002",
+            "Name": "Vidhi Chad",
+            "Age": "8",
+            "Gender": "F",
+            "MobileNumber": "9881456387",
+            "AadhaarHash": "69DF389641DD",
+            "FamilyID": "FAM_CS_0002",
+            "District": "Ghotala",
+            "JobCardID": "JC_CS_0002"
+          },
+          "domain": "Civil Registry"
+        }
+      },
+      {
+        "id": "E4",
+        "tool": "run_rule",
+        "text": "rule RULE_002 (Underage with Job Card) flags record BEN_CS_0002 | evidence={\"age\": 8, \"job_card_id\": \"JC_CS_0002\"}",
+        "arguments": {
+          "rule_id": "RULE_002",
+          "record_id": "BEN_CS_0002"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "age": 8,
+            "job_card_id": "JC_CS_0002"
+          }
+        }
+      },
+      {
+        "id": "E5",
+        "tool": "run_rule",
+        "text": "rule RULE_025 (Multi-Scheme Velocity) flags record BEN_CS_0002 | evidence={\"beneficiary_id\": \"BEN_CS_0002\", \"domain_count\": 2, \"flagged_domains\": [\"Civil Registry\", \"PM-JAY Medical\"]}",
+        "arguments": {
+          "rule_id": "RULE_025",
+          "record_id": "BEN_CS_0002"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "beneficiary_id": "BEN_CS_0002",
+            "flagged_domains": [
+              "Civil Registry",
+              "PM-JAY Medical"
+            ],
+            "domain_count": 2
+          }
+        }
+      },
+      {
+        "id": "E6",
+        "tool": "get_neighbors",
+        "text": "3 neighbor record(s) for BEN_CS_0002: CLM_002492 shares beneficiary_id; CLM_002922 shares beneficiary_id; CLM_CS_BEN_CS_0002 shares beneficiary_id",
+        "arguments": {
+          "record_id": "BEN_CS_0002"
+        },
+        "data": {
+          "count": 3,
+          "neighbors": [
+            {
+              "record_id": "CLM_002492",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "CLM_002922",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "CLM_CS_BEN_CS_0002",
+              "shares": [
+                "beneficiary_id"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "draft_first": "Record BEN_CS_0002 was flagged for review due to two issues: underage beneficiary with a job card [E4] and involvement in multiple schemes [E5]. The beneficiary, Vidhi Chad, is 8 years old and has a job card [E3], which violates MGNREGA rules [E1]. Additionally, the record shows that the beneficiary is flagged in multiple schemes, suggesting possible professional fraudster activity [E5]. Further investigation is needed to understand the context and ensure compliance [E6].",
+    "draft_final": "Record BEN_CS_0002 was flagged for review due to two issues: underage beneficiary with a job card [E4] and involvement in multiple schemes [E5]. The beneficiary, Vidhi Chad, is 8 years old and has a job card [E3], which violates MGNREGA rules [E1]. Additionally, the record shows that the beneficiary is flagged in multiple schemes, suggesting possible professional fraudster activity [E5]. Further investigation is needed to understand the context and ensure compliance [E6].",
+    "verification_first": {
+      "verdict": true,
+      "total": 4,
+      "unsupported": 0,
+      "sentences": [
+        {
+          "sentence": "Record BEN_CS_0002 was flagged for review due to two issues: underage beneficiary with a job card [E4] and involvement in multiple schemes [E5].",
+          "evidence_ids": [
+            "E4",
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "The beneficiary, Vidhi Chad, is 8 years old and has a job card [E3], which violates MGNREGA rules [E1].",
+          "evidence_ids": [
+            "E3",
+            "E1"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Additionally, the record shows that the beneficiary is flagged in multiple schemes, suggesting possible professional fraudster activity [E5].",
+          "evidence_ids": [
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Further investigation is needed to understand the context and ensure compliance [E6].",
+          "evidence_ids": [
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "verification": {
+      "verdict": true,
+      "total": 4,
+      "unsupported": 0,
+      "sentences": [
+        {
+          "sentence": "Record BEN_CS_0002 was flagged for review due to two issues: underage beneficiary with a job card [E4] and involvement in multiple schemes [E5].",
+          "evidence_ids": [
+            "E4",
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "The beneficiary, Vidhi Chad, is 8 years old and has a job card [E3], which violates MGNREGA rules [E1].",
+          "evidence_ids": [
+            "E3",
+            "E1"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Additionally, the record shows that the beneficiary is flagged in multiple schemes, suggesting possible professional fraudster activity [E5].",
+          "evidence_ids": [
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Further investigation is needed to understand the context and ensure compliance [E6].",
+          "evidence_ids": [
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "revisions": 0,
+    "revisions_accepted": 0,
+    "revision_rejected": false,
+    "tool_calls": 6,
+    "tool_call_log": [
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_002"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_record",
+        "arguments": {
+          "record_id": "BEN_CS_0002"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_CS_0002",
+          "rule_id": "RULE_002"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_CS_0002",
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_neighbors",
+        "arguments": {
+          "record_id": "BEN_CS_0002"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      }
+    ],
+    "status": "verified",
+    "mode": "llm",
+    "error": null
+  },
+  {
+    "record_id": "BEN_CS_0003",
+    "domain": "Civil Registry",
+    "rule_ids": [
+      "RULE_002",
+      "RULE_025"
+    ],
+    "evidence": [
+      {
+        "id": "E1",
+        "tool": "explain_rule",
+        "text": "rule RULE_002 | name=Underage with Job Card | domain=Civil Registry | severity=25 | description=Minor (<18) has Job Card - MGNREGA violation",
+        "arguments": {
+          "rule_id": "RULE_002"
+        },
+        "data": {
+          "rule_id": "RULE_002",
+          "name": "Underage with Job Card",
+          "domain": "Civil Registry",
+          "severity": 25,
+          "description": "Minor (<18) has Job Card - MGNREGA violation"
+        }
+      },
+      {
+        "id": "E2",
+        "tool": "explain_rule",
+        "text": "rule RULE_025 | name=Multi-Scheme Velocity | domain=Cross-Domain | severity=40 | description=Same beneficiary flagged in multiple schemes - professional fraudster",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "data": {
+          "rule_id": "RULE_025",
+          "name": "Multi-Scheme Velocity",
+          "domain": "Cross-Domain",
+          "severity": 40,
+          "description": "Same beneficiary flagged in multiple schemes - professional fraudster"
+        }
+      },
+      {
+        "id": "E3",
+        "tool": "get_record",
+        "text": "record BEN_CS_0003 | domain=Civil Registry | BeneficiaryID=BEN_CS_0003 | Name=Aarnav Bhardwaj | Age=8 | Gender=O | MobileNumber=9860949053 | AadhaarHash=46704CEDA164 | FamilyID=FAM_CS_0003 | District=Ghotala | JobCardID=JC_CS_0003",
+        "arguments": {
+          "record_id": "BEN_CS_0003"
+        },
+        "data": {
+          "record": {
+            "BeneficiaryID": "BEN_CS_0003",
+            "Name": "Aarnav Bhardwaj",
+            "Age": "8",
+            "Gender": "O",
+            "MobileNumber": "9860949053",
+            "AadhaarHash": "46704CEDA164",
+            "FamilyID": "FAM_CS_0003",
+            "District": "Ghotala",
+            "JobCardID": "JC_CS_0003"
+          },
+          "domain": "Civil Registry"
+        }
+      },
+      {
+        "id": "E4",
+        "tool": "run_rule",
+        "text": "rule RULE_002 (Underage with Job Card) flags record BEN_CS_0003 | evidence={\"age\": 8, \"job_card_id\": \"JC_CS_0003\"}",
+        "arguments": {
+          "rule_id": "RULE_002",
+          "record_id": "BEN_CS_0003"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "age": 8,
+            "job_card_id": "JC_CS_0003"
+          }
+        }
+      },
+      {
+        "id": "E5",
+        "tool": "run_rule",
+        "text": "rule RULE_025 (Multi-Scheme Velocity) flags record BEN_CS_0003 | evidence={\"beneficiary_id\": \"BEN_CS_0003\", \"domain_count\": 2, \"flagged_domains\": [\"Civil Registry\", \"MGNREGA Labor\"]}",
+        "arguments": {
+          "rule_id": "RULE_025",
+          "record_id": "BEN_CS_0003"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "beneficiary_id": "BEN_CS_0003",
+            "flagged_domains": [
+              "Civil Registry",
+              "MGNREGA Labor"
+            ],
+            "domain_count": 2
+          }
+        }
+      },
+      {
+        "id": "E6",
+        "tool": "get_neighbors",
+        "text": "3 neighbor record(s) for BEN_CS_0003: CLM_000623 shares beneficiary_id; CLM_002827 shares beneficiary_id; TXN_MGN_CS_BEN_CS_0003 shares job_card",
+        "arguments": {
+          "record_id": "BEN_CS_0003"
+        },
+        "data": {
+          "count": 3,
+          "neighbors": [
+            {
+              "record_id": "CLM_000623",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "CLM_002827",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_CS_BEN_CS_0003",
+              "shares": [
+                "job_card"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "draft_first": "Record BEN_CS_0003 has been flagged for review due to two specific issues. Firstly, the record violates RULE_002, which indicates that a minor (age 8) has a Job Card, suggesting a potential MGNREGA violation [E4]. Secondly, the record is flagged by RULE_025 for being part of multiple schemes, as it is shared across the Civil Registry and MGNREGA Labor domains [E5]. Additionally, the record shares a beneficiary ID with other records and is linked to a job card used in another scheme [E6]. Further investigation is recommended to understand the context and ensure compliance.",
+    "draft_final": "Record BEN_CS_0003 has been flagged for review due to two specific issues: the record violates RULE_002, which indicates that a minor (age 8) has a Job Card, suggesting a potential MGNREGA violation [E4]. Additionally, the record is flagged by RULE_025 for being part of multiple schemes, as it is shared across the Civil Registry and MGNREGA Labor domains [E5]. Further investigation is recommended to understand the context and ensure compliance, based on the evidence provided [E4, E5].",
+    "verification_first": {
+      "verdict": false,
+      "total": 5,
+      "unsupported": 2,
+      "sentences": [
+        {
+          "sentence": "Record BEN_CS_0003 has been flagged for review due to two specific issues.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 0003"
+          ]
+        },
+        {
+          "sentence": "Firstly, the record violates RULE_002, which indicates that a minor (age 8) has a Job Card, suggesting a potential MGNREGA violation [E4].",
+          "evidence_ids": [
+            "E4"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Secondly, the record is flagged by RULE_025 for being part of multiple schemes, as it is shared across the Civil Registry and MGNREGA Labor domains [E5].",
+          "evidence_ids": [
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Additionally, the record shares a beneficiary ID with other records and is linked to a job card used in another scheme [E6].",
+          "evidence_ids": [
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Further investigation is recommended to understand the context and ensure compliance.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list"
+          ]
+        }
+      ]
+    },
+    "verification": {
+      "verdict": true,
+      "total": 3,
+      "unsupported": 0,
+      "sentences": [
+        {
+          "sentence": "Record BEN_CS_0003 has been flagged for review due to two specific issues: the record violates RULE_002, which indicates that a minor (age 8) has a Job Card, suggesting a potential MGNREGA violation [E4].",
+          "evidence_ids": [
+            "E4"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Additionally, the record is flagged by RULE_025 for being part of multiple schemes, as it is shared across the Civil Registry and MGNREGA Labor domains [E5].",
+          "evidence_ids": [
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Further investigation is recommended to understand the context and ensure compliance, based on the evidence provided [E4, E5].",
+          "evidence_ids": [
+            "E4",
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "revisions": 1,
+    "revisions_accepted": 1,
+    "revision_rejected": false,
+    "tool_calls": 6,
+    "tool_call_log": [
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_002"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_record",
+        "arguments": {
+          "record_id": "BEN_CS_0003"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_CS_0003",
+          "rule_id": "RULE_002"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_CS_0003",
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_neighbors",
+        "arguments": {
+          "record_id": "BEN_CS_0003"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      }
+    ],
+    "status": "verified",
+    "mode": "llm",
+    "error": null
+  },
+  {
+    "record_id": "BEN_CS_0005",
+    "domain": "Civil Registry",
+    "rule_ids": [
+      "RULE_002",
+      "RULE_025"
+    ],
+    "evidence": [
+      {
+        "id": "E1",
+        "tool": "explain_rule",
+        "text": "rule RULE_002 | name=Underage with Job Card | domain=Civil Registry | severity=25 | description=Minor (<18) has Job Card - MGNREGA violation",
+        "arguments": {
+          "rule_id": "RULE_002"
+        },
+        "data": {
+          "rule_id": "RULE_002",
+          "name": "Underage with Job Card",
+          "domain": "Civil Registry",
+          "severity": 25,
+          "description": "Minor (<18) has Job Card - MGNREGA violation"
+        }
+      },
+      {
+        "id": "E2",
+        "tool": "explain_rule",
+        "text": "rule RULE_025 | name=Multi-Scheme Velocity | domain=Cross-Domain | severity=40 | description=Same beneficiary flagged in multiple schemes - professional fraudster",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "data": {
+          "rule_id": "RULE_025",
+          "name": "Multi-Scheme Velocity",
+          "domain": "Cross-Domain",
+          "severity": 40,
+          "description": "Same beneficiary flagged in multiple schemes - professional fraudster"
+        }
+      },
+      {
+        "id": "E3",
+        "tool": "get_record",
+        "text": "record BEN_CS_0005 | domain=Civil Registry | BeneficiaryID=BEN_CS_0005 | Name=Hardik Puri | Age=5 | Gender=M | MobileNumber=9883752525 | AadhaarHash=9777F2D2393F | FamilyID=FAM_CS_0005 | District=Bharpur | JobCardID=JC_CS_0005",
+        "arguments": {
+          "record_id": "BEN_CS_0005"
+        },
+        "data": {
+          "record": {
+            "BeneficiaryID": "BEN_CS_0005",
+            "Name": "Hardik Puri",
+            "Age": "5",
+            "Gender": "M",
+            "MobileNumber": "9883752525",
+            "AadhaarHash": "9777F2D2393F",
+            "FamilyID": "FAM_CS_0005",
+            "District": "Bharpur",
+            "JobCardID": "JC_CS_0005"
+          },
+          "domain": "Civil Registry"
+        }
+      },
+      {
+        "id": "E4",
+        "tool": "run_rule",
+        "text": "rule RULE_002 (Underage with Job Card) flags record BEN_CS_0005 | evidence={\"age\": 5, \"job_card_id\": \"JC_CS_0005\"}",
+        "arguments": {
+          "rule_id": "RULE_002",
+          "record_id": "BEN_CS_0005"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "age": 5,
+            "job_card_id": "JC_CS_0005"
+          }
+        }
+      },
+      {
+        "id": "E5",
+        "tool": "run_rule",
+        "text": "rule RULE_025 (Multi-Scheme Velocity) flags record BEN_CS_0005 | evidence={\"beneficiary_id\": \"BEN_CS_0005\", \"domain_count\": 2, \"flagged_domains\": [\"Civil Registry\", \"PM-JAY Medical\"]}",
+        "arguments": {
+          "rule_id": "RULE_025",
+          "record_id": "BEN_CS_0005"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "beneficiary_id": "BEN_CS_0005",
+            "flagged_domains": [
+              "Civil Registry",
+              "PM-JAY Medical"
+            ],
+            "domain_count": 2
+          }
+        }
+      },
+      {
+        "id": "E6",
+        "tool": "get_neighbors",
+        "text": "3 neighbor record(s) for BEN_CS_0005: CLM_000054 shares beneficiary_id; CLM_002772 shares beneficiary_id; CLM_CS_BEN_CS_0005 shares beneficiary_id",
+        "arguments": {
+          "record_id": "BEN_CS_0005"
+        },
+        "data": {
+          "count": 3,
+          "neighbors": [
+            {
+              "record_id": "CLM_000054",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "CLM_002772",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "CLM_CS_BEN_CS_0005",
+              "shares": [
+                "beneficiary_id"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "draft_first": "Record BEN_CS_0005 has been flagged for review due to two issues: underage employment and potential involvement in multi-scheme activity. The record indicates that the beneficiary, Hardik Puri, is 5 years old and has a job card (JC_CS_0005), which violates MGNREGA rules [E1]. Additionally, the record is flagged for multi-scheme velocity, as the same beneficiary is also found in the PM-JAY Medical scheme [E5]. Further investigation is recommended to verify the legitimacy of these flags [E2, E3, E6].",
+    "draft_final": "Record BEN_CS_0005 has been flagged for review due to two issues: underage employment and potential involvement in multi-scheme activity. The record indicates that the beneficiary, Hardik Puri, is 5 years old and has a job card (JC_CS_0005), which violates MGNREGA rules [E1]. Additionally, the record is flagged for multi-scheme velocity, as the same beneficiary is also found in the PM-JAY Medical scheme [E5]. Further investigation is recommended to verify the legitimacy of these flags [E2, E3, E6].",
+    "verification_first": {
+      "verdict": false,
+      "total": 4,
+      "unsupported": 2,
+      "sentences": [
+        {
+          "sentence": "Record BEN_CS_0005 has been flagged for review due to two issues: underage employment and potential involvement in multi-scheme activity.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 0005"
+          ]
+        },
+        {
+          "sentence": "The record indicates that the beneficiary, Hardik Puri, is 5 years old and has a job card (JC_CS_0005), which violates MGNREGA rules [E1].",
+          "evidence_ids": [
+            "E1"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 0005, 5"
+          ]
+        },
+        {
+          "sentence": "Additionally, the record is flagged for multi-scheme velocity, as the same beneficiary is also found in the PM-JAY Medical scheme [E5].",
+          "evidence_ids": [
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Further investigation is recommended to verify the legitimacy of these flags [E2, E3, E6].",
+          "evidence_ids": [
+            "E2",
+            "E3",
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "verification": {
+      "verdict": false,
+      "total": 4,
+      "unsupported": 2,
+      "sentences": [
+        {
+          "sentence": "Record BEN_CS_0005 has been flagged for review due to two issues: underage employment and potential involvement in multi-scheme activity.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 0005"
+          ]
+        },
+        {
+          "sentence": "The record indicates that the beneficiary, Hardik Puri, is 5 years old and has a job card (JC_CS_0005), which violates MGNREGA rules [E1].",
+          "evidence_ids": [
+            "E1"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 0005, 5"
+          ]
+        },
+        {
+          "sentence": "Additionally, the record is flagged for multi-scheme velocity, as the same beneficiary is also found in the PM-JAY Medical scheme [E5].",
+          "evidence_ids": [
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Further investigation is recommended to verify the legitimacy of these flags [E2, E3, E6].",
+          "evidence_ids": [
+            "E2",
+            "E3",
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "revisions": 1,
+    "revisions_accepted": 0,
+    "revision_rejected": true,
+    "tool_calls": 6,
+    "tool_call_log": [
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_002"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_record",
+        "arguments": {
+          "record_id": "BEN_CS_0005"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_CS_0005",
+          "rule_id": "RULE_002"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "rule_id": "RULE_025",
+          "record_id": "BEN_CS_0005"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_neighbors",
+        "arguments": {
+          "record_id": "BEN_CS_0005"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      }
+    ],
+    "status": "needs_human",
+    "mode": "llm",
+    "error": null
+  },
+  {
+    "record_id": "BEN_CS_0006",
+    "domain": "Civil Registry",
+    "rule_ids": [
+      "RULE_002",
+      "RULE_025"
+    ],
+    "evidence": [
+      {
+        "id": "E1",
+        "tool": "explain_rule",
+        "text": "rule RULE_002 | name=Underage with Job Card | domain=Civil Registry | severity=25 | description=Minor (<18) has Job Card - MGNREGA violation",
+        "arguments": {
+          "rule_id": "RULE_002"
+        },
+        "data": {
+          "rule_id": "RULE_002",
+          "name": "Underage with Job Card",
+          "domain": "Civil Registry",
+          "severity": 25,
+          "description": "Minor (<18) has Job Card - MGNREGA violation"
+        }
+      },
+      {
+        "id": "E2",
+        "tool": "explain_rule",
+        "text": "rule RULE_025 | name=Multi-Scheme Velocity | domain=Cross-Domain | severity=40 | description=Same beneficiary flagged in multiple schemes - professional fraudster",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "data": {
+          "rule_id": "RULE_025",
+          "name": "Multi-Scheme Velocity",
+          "domain": "Cross-Domain",
+          "severity": 40,
+          "description": "Same beneficiary flagged in multiple schemes - professional fraudster"
+        }
+      },
+      {
+        "id": "E3",
+        "tool": "get_record",
+        "text": "record BEN_CS_0006 | domain=Civil Registry | BeneficiaryID=BEN_CS_0006 | Name=Qarin Oak | Age=12 | Gender=F | MobileNumber=9854856320 | AadhaarHash=BC36E134EDFC | FamilyID=FAM_CS_0006 | District=Bharpur | JobCardID=JC_CS_0006",
+        "arguments": {
+          "record_id": "BEN_CS_0006"
+        },
+        "data": {
+          "record": {
+            "BeneficiaryID": "BEN_CS_0006",
+            "Name": "Qarin Oak",
+            "Age": "12",
+            "Gender": "F",
+            "MobileNumber": "9854856320",
+            "AadhaarHash": "BC36E134EDFC",
+            "FamilyID": "FAM_CS_0006",
+            "District": "Bharpur",
+            "JobCardID": "JC_CS_0006"
+          },
+          "domain": "Civil Registry"
+        }
+      },
+      {
+        "id": "E4",
+        "tool": "run_rule",
+        "text": "rule RULE_002 (Underage with Job Card) flags record BEN_CS_0006 | evidence={\"age\": 12, \"job_card_id\": \"JC_CS_0006\"}",
+        "arguments": {
+          "rule_id": "RULE_002",
+          "record_id": "BEN_CS_0006"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "age": 12,
+            "job_card_id": "JC_CS_0006"
+          }
+        }
+      },
+      {
+        "id": "E5",
+        "tool": "run_rule",
+        "text": "rule RULE_025 (Multi-Scheme Velocity) flags record BEN_CS_0006 | evidence={\"beneficiary_id\": \"BEN_CS_0006\", \"domain_count\": 2, \"flagged_domains\": [\"Civil Registry\", \"MGNREGA Labor\"]}",
+        "arguments": {
+          "rule_id": "RULE_025",
+          "record_id": "BEN_CS_0006"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "beneficiary_id": "BEN_CS_0006",
+            "flagged_domains": [
+              "Civil Registry",
+              "MGNREGA Labor"
+            ],
+            "domain_count": 2
+          }
+        }
+      },
+      {
+        "id": "E6",
+        "tool": "get_neighbors",
+        "text": "3 neighbor record(s) for BEN_CS_0006: CLM_002335 shares beneficiary_id; CLM_002675 shares beneficiary_id; TXN_MGN_CS_BEN_CS_0006 shares job_card",
+        "arguments": {
+          "record_id": "BEN_CS_0006"
+        },
+        "data": {
+          "count": 3,
+          "neighbors": [
+            {
+              "record_id": "CLM_002335",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "CLM_002675",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_CS_BEN_CS_0006",
+              "shares": [
+                "job_card"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "draft_first": "Record BEN_CS_0006 was flagged for review due to two specific issues as per the rules applied. Firstly, the record triggered RULE_002, which indicates that a minor (age 12, as stated in [E3]) has a job card, potentially violating MGNREGA regulations [E1]. Secondly, the record was flagged by RULE_025, suggesting that the beneficiary is involved in multiple schemes, as evidenced by the presence in both the Civil Registry and MGNREGA Labor domains [E5]. Additional information from neighboring records [E6] shows shared identifiers with other records, which may warrant further investigation.",
+    "draft_final": "Record BEN_CS_0006 was flagged for review due to two specific issues as per the rules applied. Firstly, the record triggered RULE_002, which indicates that a minor (age 12, as stated in [E3]) has a job card, potentially violating MGNREGA regulations [E1]. Secondly, the record was flagged by RULE_025, suggesting that the beneficiary is involved in multiple schemes, as evidenced by the presence in both the Civil Registry and MGNREGA Labor domains [E5]. Additional information from neighboring records [E6] shows shared identifiers with other records, which may warrant further investigation.",
+    "verification_first": {
+      "verdict": false,
+      "total": 4,
+      "unsupported": 1,
+      "sentences": [
+        {
+          "sentence": "Record BEN_CS_0006 was flagged for review due to two specific issues as per the rules applied.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 0006"
+          ]
+        },
+        {
+          "sentence": "Firstly, the record triggered RULE_002, which indicates that a minor (age 12, as stated in [E3]) has a job card, potentially violating MGNREGA regulations [E1].",
+          "evidence_ids": [
+            "E3",
+            "E1"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Secondly, the record was flagged by RULE_025, suggesting that the beneficiary is involved in multiple schemes, as evidenced by the presence in both the Civil Registry and MGNREGA Labor domains [E5].",
+          "evidence_ids": [
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Additional information from neighboring records [E6] shows shared identifiers with other records, which may warrant further investigation.",
+          "evidence_ids": [
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "verification": {
+      "verdict": false,
+      "total": 4,
+      "unsupported": 1,
+      "sentences": [
+        {
+          "sentence": "Record BEN_CS_0006 was flagged for review due to two specific issues as per the rules applied.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 0006"
+          ]
+        },
+        {
+          "sentence": "Firstly, the record triggered RULE_002, which indicates that a minor (age 12, as stated in [E3]) has a job card, potentially violating MGNREGA regulations [E1].",
+          "evidence_ids": [
+            "E3",
+            "E1"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Secondly, the record was flagged by RULE_025, suggesting that the beneficiary is involved in multiple schemes, as evidenced by the presence in both the Civil Registry and MGNREGA Labor domains [E5].",
+          "evidence_ids": [
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Additional information from neighboring records [E6] shows shared identifiers with other records, which may warrant further investigation.",
+          "evidence_ids": [
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "revisions": 1,
+    "revisions_accepted": 0,
+    "revision_rejected": true,
+    "tool_calls": 6,
+    "tool_call_log": [
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_002"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_record",
+        "arguments": {
+          "record_id": "BEN_CS_0006"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_CS_0006",
+          "rule_id": "RULE_002"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_CS_0006",
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_neighbors",
+        "arguments": {
+          "record_id": "BEN_CS_0006"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      }
+    ],
+    "status": "needs_human",
+    "mode": "llm",
+    "error": null
+  },
+  {
+    "record_id": "BEN_CS_0008",
+    "domain": "Civil Registry",
+    "rule_ids": [
+      "RULE_002",
+      "RULE_025"
+    ],
+    "evidence": [
+      {
+        "id": "E1",
+        "tool": "explain_rule",
+        "text": "rule RULE_002 | name=Underage with Job Card | domain=Civil Registry | severity=25 | description=Minor (<18) has Job Card - MGNREGA violation",
+        "arguments": {
+          "rule_id": "RULE_002"
+        },
+        "data": {
+          "rule_id": "RULE_002",
+          "name": "Underage with Job Card",
+          "domain": "Civil Registry",
+          "severity": 25,
+          "description": "Minor (<18) has Job Card - MGNREGA violation"
+        }
+      },
+      {
+        "id": "E2",
+        "tool": "explain_rule",
+        "text": "rule RULE_025 | name=Multi-Scheme Velocity | domain=Cross-Domain | severity=40 | description=Same beneficiary flagged in multiple schemes - professional fraudster",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "data": {
+          "rule_id": "RULE_025",
+          "name": "Multi-Scheme Velocity",
+          "domain": "Cross-Domain",
+          "severity": 40,
+          "description": "Same beneficiary flagged in multiple schemes - professional fraudster"
+        }
+      },
+      {
+        "id": "E3",
+        "tool": "get_record",
+        "text": "record BEN_CS_0008 | domain=Civil Registry | BeneficiaryID=BEN_CS_0008 | Name=Yoshita Pillay | Age=6 | Gender=M | MobileNumber=9892422102 | AadhaarHash=ADC2A0411612 | FamilyID=FAM_CS_0008 | District=Naqli Nagar | JobCardID=JC_CS_0008",
+        "arguments": {
+          "record_id": "BEN_CS_0008"
+        },
+        "data": {
+          "record": {
+            "BeneficiaryID": "BEN_CS_0008",
+            "Name": "Yoshita Pillay",
+            "Age": "6",
+            "Gender": "M",
+            "MobileNumber": "9892422102",
+            "AadhaarHash": "ADC2A0411612",
+            "FamilyID": "FAM_CS_0008",
+            "District": "Naqli Nagar",
+            "JobCardID": "JC_CS_0008"
+          },
+          "domain": "Civil Registry"
+        }
+      },
+      {
+        "id": "E4",
+        "tool": "run_rule",
+        "text": "rule RULE_002 (Underage with Job Card) flags record BEN_CS_0008 | evidence={\"age\": 6, \"job_card_id\": \"JC_CS_0008\"}",
+        "arguments": {
+          "rule_id": "RULE_002",
+          "record_id": "BEN_CS_0008"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "age": 6,
+            "job_card_id": "JC_CS_0008"
+          }
+        }
+      },
+      {
+        "id": "E5",
+        "tool": "run_rule",
+        "text": "rule RULE_025 (Multi-Scheme Velocity) flags record BEN_CS_0008 | evidence={\"beneficiary_id\": \"BEN_CS_0008\", \"domain_count\": 2, \"flagged_domains\": [\"Civil Registry\", \"PM-JAY Medical\"]}",
+        "arguments": {
+          "rule_id": "RULE_025",
+          "record_id": "BEN_CS_0008"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "beneficiary_id": "BEN_CS_0008",
+            "flagged_domains": [
+              "Civil Registry",
+              "PM-JAY Medical"
+            ],
+            "domain_count": 2
+          }
+        }
+      },
+      {
+        "id": "E6",
+        "tool": "get_neighbors",
+        "text": "2 neighbor record(s) for BEN_CS_0008: CLM_000084 shares beneficiary_id; CLM_CS_BEN_CS_0008 shares beneficiary_id",
+        "arguments": {
+          "record_id": "BEN_CS_0008"
+        },
+        "data": {
+          "count": 2,
+          "neighbors": [
+            {
+              "record_id": "CLM_000084",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "CLM_CS_BEN_CS_0008",
+              "shares": [
+                "beneficiary_id"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "draft_first": "Record BEN_CS_0008 was flagged for review due to two issues: the beneficiary, Yoshita Pillay, being underage (6 years old) and having a job card, which violates MGNREGA rules [E1], and the beneficiary being flagged in multiple schemes, suggesting potential professional fraudster activity [E2]. The record also shares a beneficiary ID with two other records, CLM_000084 and CLM_CS_BEN_CS_0008, indicating cross-domain connections [E6].",
+    "draft_final": "Record BEN_CS_0008 was flagged for review due to two issues: the beneficiary, Yoshita Pillay, being underage (6 years old) and having a job card, which violates MGNREGA rules [E1], and the beneficiary being flagged in multiple schemes, suggesting potential professional fraudster activity [E2]. The record also shares a beneficiary ID with two other records, CLM_000084 and CLM_CS_BEN_CS_0008, indicating cross-domain connections [E6].",
+    "verification_first": {
+      "verdict": false,
+      "total": 2,
+      "unsupported": 1,
+      "sentences": [
+        {
+          "sentence": "Record BEN_CS_0008 was flagged for review due to two issues: the beneficiary, Yoshita Pillay, being underage (6 years old) and having a job card, which violates MGNREGA rules [E1], and the beneficiary being flagged in multiple schemes, suggesting potential professional fraudster activity [E2].",
+          "evidence_ids": [
+            "E1",
+            "E2"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 0008, 6"
+          ]
+        },
+        {
+          "sentence": "The record also shares a beneficiary ID with two other records, CLM_000084 and CLM_CS_BEN_CS_0008, indicating cross-domain connections [E6].",
+          "evidence_ids": [
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "verification": {
+      "verdict": false,
+      "total": 2,
+      "unsupported": 1,
+      "sentences": [
+        {
+          "sentence": "Record BEN_CS_0008 was flagged for review due to two issues: the beneficiary, Yoshita Pillay, being underage (6 years old) and having a job card, which violates MGNREGA rules [E1], and the beneficiary being flagged in multiple schemes, suggesting potential professional fraudster activity [E2].",
+          "evidence_ids": [
+            "E1",
+            "E2"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 0008, 6"
+          ]
+        },
+        {
+          "sentence": "The record also shares a beneficiary ID with two other records, CLM_000084 and CLM_CS_BEN_CS_0008, indicating cross-domain connections [E6].",
+          "evidence_ids": [
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "revisions": 1,
+    "revisions_accepted": 0,
+    "revision_rejected": true,
+    "tool_calls": 6,
+    "tool_call_log": [
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_002"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_record",
+        "arguments": {
+          "record_id": "BEN_CS_0008"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_CS_0008",
+          "rule_id": "RULE_002"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_CS_0008",
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_neighbors",
+        "arguments": {
+          "record_id": "BEN_CS_0008"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      }
+    ],
+    "status": "needs_human",
+    "mode": "llm",
+    "error": null
+  },
+  {
+    "record_id": "BEN_CS_0009",
+    "domain": "Civil Registry",
+    "rule_ids": [
+      "RULE_002",
+      "RULE_025"
+    ],
+    "evidence": [
+      {
+        "id": "E1",
+        "tool": "explain_rule",
+        "text": "rule RULE_002 | name=Underage with Job Card | domain=Civil Registry | severity=25 | description=Minor (<18) has Job Card - MGNREGA violation",
+        "arguments": {
+          "rule_id": "RULE_002"
+        },
+        "data": {
+          "rule_id": "RULE_002",
+          "name": "Underage with Job Card",
+          "domain": "Civil Registry",
+          "severity": 25,
+          "description": "Minor (<18) has Job Card - MGNREGA violation"
+        }
+      },
+      {
+        "id": "E2",
+        "tool": "explain_rule",
+        "text": "rule RULE_025 | name=Multi-Scheme Velocity | domain=Cross-Domain | severity=40 | description=Same beneficiary flagged in multiple schemes - professional fraudster",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "data": {
+          "rule_id": "RULE_025",
+          "name": "Multi-Scheme Velocity",
+          "domain": "Cross-Domain",
+          "severity": 40,
+          "description": "Same beneficiary flagged in multiple schemes - professional fraudster"
+        }
+      },
+      {
+        "id": "E3",
+        "tool": "get_record",
+        "text": "record BEN_CS_0009 | domain=Civil Registry | BeneficiaryID=BEN_CS_0009 | Name=Dayamai Agate | Age=7 | Gender=M | MobileNumber=9858037143 | AadhaarHash=8E4C6D5D0477 | FamilyID=FAM_CS_0009 | District=Naqli Nagar | JobCardID=JC_CS_0009",
+        "arguments": {
+          "record_id": "BEN_CS_0009"
+        },
+        "data": {
+          "record": {
+            "BeneficiaryID": "BEN_CS_0009",
+            "Name": "Dayamai Agate",
+            "Age": "7",
+            "Gender": "M",
+            "MobileNumber": "9858037143",
+            "AadhaarHash": "8E4C6D5D0477",
+            "FamilyID": "FAM_CS_0009",
+            "District": "Naqli Nagar",
+            "JobCardID": "JC_CS_0009"
+          },
+          "domain": "Civil Registry"
+        }
+      },
+      {
+        "id": "E4",
+        "tool": "run_rule",
+        "text": "rule RULE_002 (Underage with Job Card) flags record BEN_CS_0009 | evidence={\"age\": 7, \"job_card_id\": \"JC_CS_0009\"}",
+        "arguments": {
+          "rule_id": "RULE_002",
+          "record_id": "BEN_CS_0009"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "age": 7,
+            "job_card_id": "JC_CS_0009"
+          }
+        }
+      },
+      {
+        "id": "E5",
+        "tool": "run_rule",
+        "text": "rule RULE_025 (Multi-Scheme Velocity) flags record BEN_CS_0009 | evidence={\"beneficiary_id\": \"BEN_CS_0009\", \"domain_count\": 2, \"flagged_domains\": [\"Civil Registry\", \"MGNREGA Labor\"]}",
+        "arguments": {
+          "rule_id": "RULE_025",
+          "record_id": "BEN_CS_0009"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "beneficiary_id": "BEN_CS_0009",
+            "flagged_domains": [
+              "Civil Registry",
+              "MGNREGA Labor"
+            ],
+            "domain_count": 2
+          }
+        }
+      },
+      {
+        "id": "E6",
+        "tool": "get_neighbors",
+        "text": "1 neighbor record(s) for BEN_CS_0009: TXN_MGN_CS_BEN_CS_0009 shares job_card",
+        "arguments": {
+          "record_id": "BEN_CS_0009"
+        },
+        "data": {
+          "count": 1,
+          "neighbors": [
+            {
+              "record_id": "TXN_MGN_CS_BEN_CS_0009",
+              "shares": [
+                "job_card"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "draft_first": "Record BEN_CS_0009 has been flagged for review due to two issues: the beneficiary, Dayamai Agate, being under 18 and having a job card, which violates MGNREGA rules [E3, E4], and the beneficiary being flagged in multiple schemes across different domains [E5]. Additionally, a neighboring record shares the same job card [E6]. Further investigation is recommended.",
+    "draft_final": "Record BEN_CS_0009 has been flagged for review due to two issues: the beneficiary, Dayamai Agate, being under 18 and having a job card, which violates MGNREGA rules [E3, E4], and the beneficiary being flagged in multiple schemes, specifically in the Civil Registry and MGNREGA Labor domains [E5]. Further investigation is recommended [E5].",
+    "verification_first": {
+      "verdict": false,
+      "total": 3,
+      "unsupported": 2,
+      "sentences": [
+        {
+          "sentence": "Record BEN_CS_0009 has been flagged for review due to two issues: the beneficiary, Dayamai Agate, being under 18 and having a job card, which violates MGNREGA rules [E3, E4], and the beneficiary being flagged in multiple schemes across different domains [E5].",
+          "evidence_ids": [
+            "E3",
+            "E4",
+            "E5"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 18"
+          ]
+        },
+        {
+          "sentence": "Additionally, a neighboring record shares the same job card [E6].",
+          "evidence_ids": [
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Further investigation is recommended.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list"
+          ]
+        }
+      ]
+    },
+    "verification": {
+      "verdict": false,
+      "total": 2,
+      "unsupported": 1,
+      "sentences": [
+        {
+          "sentence": "Record BEN_CS_0009 has been flagged for review due to two issues: the beneficiary, Dayamai Agate, being under 18 and having a job card, which violates MGNREGA rules [E3, E4], and the beneficiary being flagged in multiple schemes, specifically in the Civil Registry and MGNREGA Labor domains [E5].",
+          "evidence_ids": [
+            "E3",
+            "E4",
+            "E5"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 18"
+          ]
+        },
+        {
+          "sentence": "Further investigation is recommended [E5].",
+          "evidence_ids": [
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "revisions": 2,
+    "revisions_accepted": 1,
+    "revision_rejected": true,
+    "tool_calls": 6,
+    "tool_call_log": [
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_002"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_record",
+        "arguments": {
+          "record_id": "BEN_CS_0009"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_CS_0009",
+          "rule_id": "RULE_002"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_CS_0009",
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_neighbors",
+        "arguments": {
+          "record_id": "BEN_CS_0009"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      }
+    ],
+    "status": "needs_human",
+    "mode": "llm",
+    "error": null
+  },
+  {
+    "record_id": "BEN_CS_0011",
+    "domain": "Civil Registry",
+    "rule_ids": [
+      "RULE_002",
+      "RULE_025"
+    ],
+    "evidence": [
+      {
+        "id": "E1",
+        "tool": "explain_rule",
+        "text": "rule RULE_002 | name=Underage with Job Card | domain=Civil Registry | severity=25 | description=Minor (<18) has Job Card - MGNREGA violation",
+        "arguments": {
+          "rule_id": "RULE_002"
+        },
+        "data": {
+          "rule_id": "RULE_002",
+          "name": "Underage with Job Card",
+          "domain": "Civil Registry",
+          "severity": 25,
+          "description": "Minor (<18) has Job Card - MGNREGA violation"
+        }
+      },
+      {
+        "id": "E2",
+        "tool": "explain_rule",
+        "text": "rule RULE_025 | name=Multi-Scheme Velocity | domain=Cross-Domain | severity=40 | description=Same beneficiary flagged in multiple schemes - professional fraudster",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "data": {
+          "rule_id": "RULE_025",
+          "name": "Multi-Scheme Velocity",
+          "domain": "Cross-Domain",
+          "severity": 40,
+          "description": "Same beneficiary flagged in multiple schemes - professional fraudster"
+        }
+      },
+      {
+        "id": "E3",
+        "tool": "get_record",
+        "text": "record BEN_CS_0011 | domain=Civil Registry | BeneficiaryID=BEN_CS_0011 | Name=Bhavika Padmanabhan | Age=8 | Gender=M | MobileNumber=9832807851 | AadhaarHash=582BF8E8035B | FamilyID=FAM_CS_0011 | District=Ghotala | JobCardID=JC_CS_0011",
+        "arguments": {
+          "record_id": "BEN_CS_0011"
+        },
+        "data": {
+          "record": {
+            "BeneficiaryID": "BEN_CS_0011",
+            "Name": "Bhavika Padmanabhan",
+            "Age": "8",
+            "Gender": "M",
+            "MobileNumber": "9832807851",
+            "AadhaarHash": "582BF8E8035B",
+            "FamilyID": "FAM_CS_0011",
+            "District": "Ghotala",
+            "JobCardID": "JC_CS_0011"
+          },
+          "domain": "Civil Registry"
+        }
+      },
+      {
+        "id": "E4",
+        "tool": "run_rule",
+        "text": "rule RULE_002 (Underage with Job Card) flags record BEN_CS_0011 | evidence={\"age\": 8, \"job_card_id\": \"JC_CS_0011\"}",
+        "arguments": {
+          "rule_id": "RULE_002",
+          "record_id": "BEN_CS_0011"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "age": 8,
+            "job_card_id": "JC_CS_0011"
+          }
+        }
+      },
+      {
+        "id": "E5",
+        "tool": "run_rule",
+        "text": "rule RULE_025 (Multi-Scheme Velocity) flags record BEN_CS_0011 | evidence={\"beneficiary_id\": \"BEN_CS_0011\", \"domain_count\": 2, \"flagged_domains\": [\"Civil Registry\", \"PM-JAY Medical\"]}",
+        "arguments": {
+          "rule_id": "RULE_025",
+          "record_id": "BEN_CS_0011"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "beneficiary_id": "BEN_CS_0011",
+            "flagged_domains": [
+              "Civil Registry",
+              "PM-JAY Medical"
+            ],
+            "domain_count": 2
+          }
+        }
+      },
+      {
+        "id": "E6",
+        "tool": "get_neighbors",
+        "text": "1 neighbor record(s) for BEN_CS_0011: CLM_CS_BEN_CS_0011 shares beneficiary_id",
+        "arguments": {
+          "record_id": "BEN_CS_0011"
+        },
+        "data": {
+          "count": 1,
+          "neighbors": [
+            {
+              "record_id": "CLM_CS_BEN_CS_0011",
+              "shares": [
+                "beneficiary_id"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "draft_first": "Record BEN_CS_0011 has been flagged for review due to two issues: the beneficiary, Bhavika Padmanabhan, being underage (8 years old) and having a job card, which violates MGNREGA rules [E1], and the beneficiary being flagged in multiple schemes, suggesting potential professional involvement [E2]. The record also shares a beneficiary ID with another record, CLM_CS_BEN_CS_0011 [E6]. Further investigation is recommended to understand the context and ensure compliance. [E1][E2][E6]",
+    "draft_final": "Record BEN_CS_0011 has been flagged for review due to two issues: the beneficiary, Bhavika Padmanabhan, being underage (8 years old) and having a job card, which violates MGNREGA rules [E1], and the beneficiary being flagged in multiple schemes, specifically in the Civil Registry and PM-JAY Medical domains, suggesting potential professional involvement [E2]. Further investigation is recommended to understand the context and ensure compliance [E2]. [E1][E2]",
+    "verification_first": {
+      "verdict": false,
+      "total": 4,
+      "unsupported": 2,
+      "sentences": [
+        {
+          "sentence": "Record BEN_CS_0011 has been flagged for review due to two issues: the beneficiary, Bhavika Padmanabhan, being underage (8 years old) and having a job card, which violates MGNREGA rules [E1], and the beneficiary being flagged in multiple schemes, suggesting potential professional involvement [E2].",
+          "evidence_ids": [
+            "E1",
+            "E2"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 0011, 8"
+          ]
+        },
+        {
+          "sentence": "The record also shares a beneficiary ID with another record, CLM_CS_BEN_CS_0011 [E6].",
+          "evidence_ids": [
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Further investigation is recommended to understand the context and ensure compliance.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list"
+          ]
+        },
+        {
+          "sentence": "[E1][E2][E6]",
+          "evidence_ids": [
+            "E1",
+            "E2",
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "verification": {
+      "verdict": false,
+      "total": 3,
+      "unsupported": 1,
+      "sentences": [
+        {
+          "sentence": "Record BEN_CS_0011 has been flagged for review due to two issues: the beneficiary, Bhavika Padmanabhan, being underage (8 years old) and having a job card, which violates MGNREGA rules [E1], and the beneficiary being flagged in multiple schemes, specifically in the Civil Registry and PM-JAY Medical domains, suggesting potential professional involvement [E2].",
+          "evidence_ids": [
+            "E1",
+            "E2"
+          ],
+          "passed": false,
+          "reasons": [
+            "number(s) not in the cited evidence: 0011, 8"
+          ]
+        },
+        {
+          "sentence": "Further investigation is recommended to understand the context and ensure compliance [E2].",
+          "evidence_ids": [
+            "E2"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "[E1][E2]",
+          "evidence_ids": [
+            "E1",
+            "E2"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "revisions": 2,
+    "revisions_accepted": 1,
+    "revision_rejected": true,
+    "tool_calls": 6,
+    "tool_call_log": [
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_002"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_record",
+        "arguments": {
+          "record_id": "BEN_CS_0011"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_CS_0011",
+          "rule_id": "RULE_002"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "BEN_CS_0011",
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_neighbors",
+        "arguments": {
+          "record_id": "BEN_CS_0011"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      }
+    ],
+    "status": "needs_human",
+    "mode": "llm",
+    "error": null
+  },
+  {
+    "record_id": "CLM_000289",
+    "domain": "PM-JAY Medical",
+    "rule_ids": [
+      "RULE_010",
+      "RULE_025"
+    ],
+    "evidence": [
+      {
+        "id": "E1",
+        "tool": "explain_rule",
+        "text": "rule RULE_010 | name=Biological Mismatch | domain=PM-JAY Medical | severity=25 | description=Male patient claiming Hysterectomy - impossible procedure",
+        "arguments": {
+          "rule_id": "RULE_010"
+        },
+        "data": {
+          "rule_id": "RULE_010",
+          "name": "Biological Mismatch",
+          "domain": "PM-JAY Medical",
+          "severity": 25,
+          "description": "Male patient claiming Hysterectomy - impossible procedure"
+        }
+      },
+      {
+        "id": "E2",
+        "tool": "explain_rule",
+        "text": "rule RULE_025 | name=Multi-Scheme Velocity | domain=Cross-Domain | severity=40 | description=Same beneficiary flagged in multiple schemes - professional fraudster",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "data": {
+          "rule_id": "RULE_025",
+          "name": "Multi-Scheme Velocity",
+          "domain": "Cross-Domain",
+          "severity": 40,
+          "description": "Same beneficiary flagged in multiple schemes - professional fraudster"
+        }
+      },
+      {
+        "id": "E3",
+        "tool": "get_record",
+        "text": "record CLM_000289 | domain=PM-JAY Medical | ClaimID=CLM_000289 | BeneficiaryID=BEN_11943 | HospitalID=HOSP_006 | AdmissionDate=2026-08-23 00:00:00 | DischargeDate=2026-08-29 00:00:00 | ProcedureName=Hysterectomy | ClaimAmount=64403 | PatientStatus=Recovered",
+        "arguments": {
+          "record_id": "CLM_000289"
+        },
+        "data": {
+          "record": {
+            "ClaimID": "CLM_000289",
+            "BeneficiaryID": "BEN_11943",
+            "HospitalID": "HOSP_006",
+            "AdmissionDate": "2026-08-23 00:00:00",
+            "DischargeDate": "2026-08-29 00:00:00",
+            "ProcedureName": "Hysterectomy",
+            "ClaimAmount": "64403",
+            "PatientStatus": "Recovered"
+          },
+          "domain": "PM-JAY Medical"
+        }
+      },
+      {
+        "id": "E4",
+        "tool": "run_rule",
+        "text": "rule RULE_010 (Biological Mismatch) flags record CLM_000289 | evidence={\"gender\": \"Male\", \"procedure\": \"Hysterectomy\"}",
+        "arguments": {
+          "rule_id": "RULE_010",
+          "record_id": "CLM_000289"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "gender": "Male",
+            "procedure": "Hysterectomy"
+          }
+        }
+      },
+      {
+        "id": "E5",
+        "tool": "run_rule",
+        "text": "rule RULE_025 (Multi-Scheme Velocity) flags record CLM_000289 | evidence={\"beneficiary_id\": \"BEN_11943\", \"domain_count\": 2, \"flagged_domains\": [\"MGNREGA Labor\", \"PM-JAY Medical\"]}",
+        "arguments": {
+          "rule_id": "RULE_025",
+          "record_id": "CLM_000289"
+        },
+        "data": {
+          "flagged": true,
+          "evidence": {
+            "beneficiary_id": "BEN_11943",
+            "flagged_domains": [
+              "MGNREGA Labor",
+              "PM-JAY Medical"
+            ],
+            "domain_count": 2
+          }
+        }
+      },
+      {
+        "id": "E6",
+        "tool": "get_neighbors",
+        "text": "8 neighbor record(s) for CLM_000289: BEN_11943 shares job_card, mobile; CLM_002001 shares beneficiary_id; CLM_002254 shares beneficiary_id; TXN_MGN_000437 shares job_card; TXN_MGN_000910 shares job_card; TXN_MGN_001502 shares job_card; TXN_MGN_002689 shares job_card; TXN_MGN_003285 shares job_card",
+        "arguments": {
+          "record_id": "CLM_000289"
+        },
+        "data": {
+          "count": 8,
+          "neighbors": [
+            {
+              "record_id": "BEN_11943",
+              "shares": [
+                "job_card",
+                "mobile"
+              ]
+            },
+            {
+              "record_id": "CLM_002001",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "CLM_002254",
+              "shares": [
+                "beneficiary_id"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_000437",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_000910",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_001502",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_002689",
+              "shares": [
+                "job_card"
+              ]
+            },
+            {
+              "record_id": "TXN_MGN_003285",
+              "shares": [
+                "job_card"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "draft_first": "The record CLM_000289 has been flagged for review due to two specific issues. Firstly, it violates RULE_010 (Biological Mismatch) as it involves a male patient claiming a Hysterectomy, an impossible procedure for males [E4]. Secondly, it triggers RULE_025 (Multi-Scheme Velocity), indicating that the same beneficiary (BEN_11943) is flagged in multiple schemes, suggesting potential professional fraudster activity [E5]. The record details include a claim amount of 64403 for a Hysterectomy procedure, and the beneficiary has also been involved in transactions across two other domains [E3]. Further investigation is recommended to understand the context and verify the claims [E6].",
+    "draft_final": "The record CLM_000289 has been flagged for review due to two specific issues. Firstly, it violates RULE_010 (Biological Mismatch) as it involves a male patient claiming a Hysterectomy, an impossible procedure for males [E4]. Secondly, it triggers RULE_025 (Multi-Scheme Velocity), indicating that the same beneficiary (BEN_11943) is flagged in multiple schemes, suggesting potential professional fraudster activity [E5]. The record details include a claim amount of 64403 for a Hysterectomy procedure, and the beneficiary has also been involved in transactions across two other domains [E3]. Further investigation is recommended to understand the context and verify the claims [E6].",
+    "verification_first": {
+      "verdict": false,
+      "total": 5,
+      "unsupported": 1,
+      "sentences": [
+        {
+          "sentence": "The record CLM_000289 has been flagged for review due to two specific issues.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 000289"
+          ]
+        },
+        {
+          "sentence": "Firstly, it violates RULE_010 (Biological Mismatch) as it involves a male patient claiming a Hysterectomy, an impossible procedure for males [E4].",
+          "evidence_ids": [
+            "E4"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Secondly, it triggers RULE_025 (Multi-Scheme Velocity), indicating that the same beneficiary (BEN_11943) is flagged in multiple schemes, suggesting potential professional fraudster activity [E5].",
+          "evidence_ids": [
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "The record details include a claim amount of 64403 for a Hysterectomy procedure, and the beneficiary has also been involved in transactions across two other domains [E3].",
+          "evidence_ids": [
+            "E3"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Further investigation is recommended to understand the context and verify the claims [E6].",
+          "evidence_ids": [
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "verification": {
+      "verdict": false,
+      "total": 5,
+      "unsupported": 1,
+      "sentences": [
+        {
+          "sentence": "The record CLM_000289 has been flagged for review due to two specific issues.",
+          "evidence_ids": [],
+          "passed": false,
+          "reasons": [
+            "no [E#] citation that exists in the evidence list",
+            "number(s) not in the cited evidence: 000289"
+          ]
+        },
+        {
+          "sentence": "Firstly, it violates RULE_010 (Biological Mismatch) as it involves a male patient claiming a Hysterectomy, an impossible procedure for males [E4].",
+          "evidence_ids": [
+            "E4"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Secondly, it triggers RULE_025 (Multi-Scheme Velocity), indicating that the same beneficiary (BEN_11943) is flagged in multiple schemes, suggesting potential professional fraudster activity [E5].",
+          "evidence_ids": [
+            "E5"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "The record details include a claim amount of 64403 for a Hysterectomy procedure, and the beneficiary has also been involved in transactions across two other domains [E3].",
+          "evidence_ids": [
+            "E3"
+          ],
+          "passed": true,
+          "reasons": []
+        },
+        {
+          "sentence": "Further investigation is recommended to understand the context and verify the claims [E6].",
+          "evidence_ids": [
+            "E6"
+          ],
+          "passed": true,
+          "reasons": []
+        }
+      ]
+    },
+    "revisions": 1,
+    "revisions_accepted": 0,
+    "revision_rejected": true,
+    "tool_calls": 6,
+    "tool_call_log": [
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_010"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "explain_rule",
+        "arguments": {
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_record",
+        "arguments": {
+          "record_id": "CLM_000289"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "CLM_000289",
+          "rule_id": "RULE_010"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "run_rule",
+        "arguments": {
+          "record_id": "CLM_000289",
+          "rule_id": "RULE_025"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      },
+      {
+        "tool": "get_neighbors",
+        "arguments": {
+          "record_id": "CLM_000289"
+        },
+        "executed": true,
+        "capped": false,
+        "malformed": null
+      }
+    ],
+    "status": "needs_human",
+    "mode": "llm",
+    "error": null
+  }
+]
