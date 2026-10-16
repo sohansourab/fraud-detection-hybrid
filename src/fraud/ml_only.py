@@ -261,7 +261,7 @@ def caught_split(
         event_count = events.get(name, 0)
         caught_count = int(
             unseen_caught["fraud_type"]
-            .map(lambda v: _has_type(v, name))
+            .map(lambda v, wanted=name: _has_type(v, wanted))
             .astype(bool)
             .sum()
         )

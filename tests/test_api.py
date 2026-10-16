@@ -11,6 +11,10 @@ import sys
 from pathlib import Path
 
 import pytest
+
+# TestClient comes from starlette; fastapi 0.143 + httpx 0.28 emit a harmless
+# StarletteDeprecationWarning ("install httpx2 instead") on import. httpx is
+# pinned in requirements.txt; the warning is not a regression.
 from fastapi.testclient import TestClient
 
 REPO_ROOT = Path(__file__).resolve().parents[1]

@@ -4,9 +4,22 @@
 # set changes between releases (0.17 enables many more rules than earlier
 # versions did). Pinning it keeps `make lint` and CI stable and green across
 # ruff upgrades instead of turning every release into a repo-wide edit.
-# E4/E7/E9 are pycodestyle errors and F is pyflakes (undefined names, unused
-# imports/variables) - the rules that catch real mistakes.
+#
+# What is selected (no rule is ignored):
+#   E4, E7, E9  pycodestyle errors - imports, statements, syntax. E7 includes
+#               E722 (bare `except`).
+#   F           pyflakes - real bug classes: F821 undefined name, F841 unused
+#               variable, F401 unused import, F811 redefinition.
+#   B023        flake8-bugbear - function binds a loop variable (late-binding
+#               bug class).
+#
+# Not selected, deliberately:
+#   B905 (zip without strict=) is a real bug class but fixing it means editing
+#   src/fraud/rules/*, which this pass must not touch; it is left for a later
+#   pass rather than silently ignored.
+#   PLW1510 / PLW2901 / PLW0603 are stylistic pylint warnings (explicit
+#   `check=`, loop-name reuse, `global`), not correctness checks.
 target-version = "py311"
 
 [lint]
-select = ["E4", "E7", "E9", "F"]
+select = ["E4", "E7", "E9", "F", "B023"]

@@ -485,9 +485,9 @@ Packaging only: a `Makefile`, a CI workflow, a read-only FastAPI surface
 README "Running it" section. No rule, ML, simulator, HYBRID or `evaluate` metric
 definition changed, and no generated report was hand-edited.
 
-- `reports/hybrid.json` MD5 changed `BFA38A83...` -> `FB10A87E...` because the
-  aggregate key was renamed (`other_fraud` -> `unseen_caught`) in the P4c review;
-  no result changed. Current MD5: `FB10A87E08FE2D2DD477F7548267C898`.
+- `reports/hybrid.json` MD5 changed `BFA38A83...` -> `FB10A87E...` solely because
+  the aggregate key was renamed (`other_fraud` -> `unseen_caught`) in the P4c
+  review; no result changed. Current MD5: `FB10A87E08FE2D2DD477F7548267C898`.
 - Regression tests: `tests/test_api.py` (each route returns its report file; a
   missing report is a 404 naming `make eval`) and `tests/test_readme_metrics.py`
   (every 3-decimal figure in `README.md` must sit inside the

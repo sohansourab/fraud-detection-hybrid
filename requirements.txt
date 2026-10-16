@@ -41,6 +41,8 @@ PyYAML
 pytest
 fastapi==0.143.2
 uvicorn==0.54.0
+# httpx 0.28 is pinned: fastapi/starlette's TestClient emits a harmless
+# StarletteDeprecationWarning ("install httpx2 instead") on import.
 httpx==0.28.1
 streamlit==1.66.0
 ruff==0.17.1
