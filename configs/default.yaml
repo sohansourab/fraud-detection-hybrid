@@ -77,3 +77,29 @@ simulator:
       - ["Civil Registry", "MGNREGA Labor"]
       - ["MGNREGA Labor", "PM-JAY Medical"]
       - ["Civil Registry", "PM-JAY Medical"]
+  # Unseen typologies (module P2e): patterns with *no* matching rule, injected
+  # to measure what the current detectors miss. Appended with a separate RNG
+  # stream after the min-events floor, so existing per-type counts are
+  # unchanged. `enabled: false` skips all three. Counts are events at 0.02
+  # prevalence; each is labelled fraud_type=unseen_* with an empty rule id.
+  unseen:
+    enabled: true
+    # MGNREGA: payments kept just below the per-transaction approval limit.
+    just_under_limit:
+      count: 12
+      approval_limit: 3500
+      fraction_min: 0.95
+      fraction_max: 0.99
+    # PM-JAY: a cluster of weekend claims at one hospital within one month.
+    weekend_cluster:
+      count: 14
+      hospital_id: "HOSP_UNSEEN_WKND"
+      month: "2024-07"
+      max_weekends: 4
+    # PM-JAY: one hospital whose claim amounts rise ~3%/month over 12 months.
+    growing_amounts:
+      count: 13
+      hospital_id: "HOSP_UNSEEN_GROW"
+      months: 12
+      base_amount: 30000
+      monthly_growth: 0.03

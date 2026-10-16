@@ -108,6 +108,64 @@ class CrossSchemeConfig:
 
 
 @dataclass(frozen=True)
+class UnseenJustUnderLimitConfig:
+    """Unseen MGNREGA pattern: payments just below the approval limit (P2e).
+
+    ``count`` payments are appended with ``days == mgnrega.max_days_per_cycle``
+    and a wage rate chosen so ``days * rate`` lands in
+    ``[fraction_min, fraction_max] * approval_limit`` (so the amount stays
+    consistent with days x rate and no existing rule matches).
+    """
+
+    count: int = 12
+    approval_limit: int = 3500
+    fraction_min: float = 0.95
+    fraction_max: float = 0.99
+
+
+@dataclass(frozen=True)
+class UnseenWeekendClusterConfig:
+    """Unseen PM-JAY pattern: a weekend claim cluster at one hospital (P2e)."""
+
+    count: int = 14
+    hospital_id: str = "HOSP_UNSEEN_WKND"
+    month: str = "2024-07"
+    max_weekends: int = 4
+
+
+@dataclass(frozen=True)
+class UnseenGrowingAmountsConfig:
+    """Unseen PM-JAY pattern: claim amounts rising steadily by month (P2e)."""
+
+    count: int = 13
+    hospital_id: str = "HOSP_UNSEEN_GROW"
+    months: int = 12
+    base_amount: int = 30000
+    monthly_growth: float = 0.03
+
+
+@dataclass(frozen=True)
+class UnseenConfig:
+    """Three injected typologies that no current rule matches (module P2e).
+
+    Each is labelled ``fraud_type=unseen_*`` with an empty ``injected_rule_id``;
+    the counts are events at the 0.02 prevalence run. ``enabled=False`` skips all
+    three.
+    """
+
+    enabled: bool = True
+    just_under_limit: UnseenJustUnderLimitConfig = field(
+        default_factory=UnseenJustUnderLimitConfig
+    )
+    weekend_cluster: UnseenWeekendClusterConfig = field(
+        default_factory=UnseenWeekendClusterConfig
+    )
+    growing_amounts: UnseenGrowingAmountsConfig = field(
+        default_factory=UnseenGrowingAmountsConfig
+    )
+
+
+@dataclass(frozen=True)
 class SimulatorConfig:
     """Injection volumes for the synthetic data simulator (module P2a).
 
@@ -131,6 +189,8 @@ class SimulatorConfig:
     min_events_per_type: int = 10
     # Dedicated cross-scheme injection for Rule 025.
     cross_scheme: CrossSchemeConfig = field(default_factory=CrossSchemeConfig)
+    # Unseen typologies with no matching rule (module P2e).
+    unseen: UnseenConfig = field(default_factory=UnseenConfig)
 
 
 @dataclass(frozen=True)

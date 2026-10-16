@@ -674,8 +674,10 @@ def _label_row(record_id, domain):
     injections = INJECTIONS.get(rid)
     if injections:
         fraud_types = sorted({fraud_type for fraud_type, _ in injections})
-        rule_ids = sorted({rule_id for _, rule_id in injections})
-        return [rid, domain, 1, "|".join(fraud_types), "|".join(rule_ids), split_for(rid)]
+        rule_ids = sorted({rule_id for _, rule_id in injections if rule_id})
+        # Unseen typologies (P2e) carry no rule id; keep the cell null/empty.
+        rule_field = "|".join(rule_ids) if rule_ids else None
+        return [rid, domain, 1, "|".join(fraud_types), rule_field, split_for(rid)]
     if rid in HARD_NEGATIVES:
         return [rid, domain, 0, HARD_NEGATIVES[rid], None, split_for(rid)]
     return [rid, domain, 0, "", None, split_for(rid)]
@@ -879,6 +881,186 @@ def apply_min_events_floor(df_ben, df_mgn, df_pmjay, min_events):
     return df_ben, df_mgn, df_pmjay, report
 
 
+# =============================================================================
+# UNSEEN TYPOLOGIES (module P2e)
+# -----------------------------------------------------------------------------
+# Three injected patterns that no current rule matches, so the harness can
+# measure what the detectors miss. They are *appended* with a separate RNG
+# stream (seed + 400) after the min-events floor, so existing per-type counts
+# and the global RNG stream are untouched. Every row is labelled
+# ``fraud_type=unseen_*`` with an empty ``injected_rule_id``.
+# =============================================================================
+
+_UNSEEN_MGNREGA_COLUMNS = (
+    'TransactionID', 'JobCardID', 'WorkCode', 'MusterRollID',
+    'WorkStartDate', 'DaysWorked', 'WageRate', 'TotalAmount',
+)
+_UNSEEN_PMJAY_COLUMNS = (
+    'ClaimID', 'BeneficiaryID', 'HospitalID', 'AdmissionDate',
+    'DischargeDate', 'ProcedureName', 'ClaimAmount', 'PatientStatus',
+)
+# Procedures used by the unseen PM-JAY patterns: surgery codes, i.e. never the
+# general ward (Rule 011 upcoding) and never female-only (Rule 010).
+_UNSEEN_PROCEDURES = ('Cataract Surgery', 'Appendectomy', 'Hernia Repair')
+
+
+def _unseen_date(rng, year, month, max_day=28):
+    """Return a deterministic date inside ``year-month`` (day 1..max_day)."""
+    return datetime(year, month, rng.randint(1, max_day)).date()
+
+
+def _linked_beneficiaries(df_ben, df_mgn, df_pmjay):
+    """Beneficiary ids already tied to a rule-flagged record (any scheme).
+
+    Unseen injections draw from the complement, so their beneficiaries cannot
+    become multi-scheme (Rule 025) or cartel members (Rule 017) by accident.
+    """
+    flagged = set(INJECTIONS)
+    linked = {str(b) for b in df_ben['BeneficiaryID'] if str(b) in flagged}
+    linked |= {cs['ben_id'] for cs in CROSS_SCHEME}
+
+    # Exact, aligned join (JobCardID -> BeneficiaryID) of the *same* filtered
+    # frame, so null job cards cannot shift the pairing (cf. the P1e fix).
+    with_card = df_ben[df_ben['JobCardID'].notna()]
+    card_to_ben = dict(zip(
+        with_card['JobCardID'].astype(str),
+        with_card['BeneficiaryID'].astype(str),
+    ))
+    for txn, card in zip(
+        df_mgn['TransactionID'].astype(str), df_mgn['JobCardID'].astype(str)
+    ):
+        if txn in flagged and card in card_to_ben:
+            linked.add(card_to_ben[card])
+    for claim, ben in zip(
+        df_pmjay['ClaimID'].astype(str), df_pmjay['BeneficiaryID'].astype(str)
+    ):
+        if claim in flagged:
+            linked.add(ben)
+    return linked
+
+
+def _inject_just_under_limit(df_mgn, safe, cfg, rng):
+    """Append MGNREGA payments kept just below the approval limit.
+
+    ``DaysWorked`` stays at ``max_days_per_cycle`` and ``WageRate`` is chosen so
+    ``DaysWorked * WageRate`` is 95-99% of the limit. The amount therefore
+    equals days x rate (no Rule 007), days is not over the cap (no Rule 005)
+    and the work code never ends ``_000`` (no Rule 006).
+    """
+    limit = cfg.approval_limit
+    days = get_config().mgnrega.max_days_per_cycle
+    cards = safe['JobCardID'].astype(str).tolist()
+    card_to_ben = dict(zip(cards, safe['BeneficiaryID'].astype(str)))
+    rows = []
+    used_bens = set()
+    for i in range(cfg.count):
+        card = rng.choice(cards)
+        rate = max(
+            1,
+            round(rng.uniform(cfg.fraction_min, cfg.fraction_max) * limit / days),
+        )
+        txn_id = f"TXN_UNSEEN_JUL_{i:04d}"
+        rows.append({
+            'TransactionID': txn_id,
+            'JobCardID': card,
+            'WorkCode': f"WC_{rng.randint(100, 999)}",
+            'MusterRollID': f"MR_UNSEEN_JUL_{i:04d}",
+            'WorkStartDate': _unseen_date(rng, 2024, 7),
+            'DaysWorked': days,
+            'WageRate': rate,
+            'TotalAmount': days * rate,
+        })
+        used_bens.add(card_to_ben.get(card))
+        _mark_fraud(txn_id, 'unseen_just_under_limit', '')
+    new = pd.DataFrame(rows, columns=list(_UNSEEN_MGNREGA_COLUMNS))
+    return pd.concat([df_mgn, new], ignore_index=True), used_bens
+
+
+def _inject_weekend_cluster(df_pmjay, ben_ids, cfg, rng):
+    """Append a cluster of weekend claims at one hospital within one month."""
+    year, month = (int(part) for part in cfg.month.split("-"))
+    slots = [
+        day for day in range(1, 29)
+        if datetime(year, month, day).weekday() >= 5
+    ][: cfg.max_weekends * 2]
+    if not slots:
+        raise RuntimeError(f"no weekend days in {cfg.month}")
+    rows = []
+    for i in range(cfg.count):
+        admission = datetime(year, month, slots[i % len(slots)]).date()
+        claim_id = f"CLM_UNSEEN_WKND_{i:04d}"
+        rows.append({
+            'ClaimID': claim_id,
+            'BeneficiaryID': rng.choice(ben_ids),
+            'HospitalID': cfg.hospital_id,
+            'AdmissionDate': admission,
+            'DischargeDate': admission + timedelta(days=rng.randint(1, 3)),
+            'ProcedureName': _UNSEEN_PROCEDURES[i % len(_UNSEEN_PROCEDURES)],
+            'ClaimAmount': rng.randint(20000, 45000),
+            'PatientStatus': 'Discharged',
+        })
+        _mark_fraud(claim_id, 'unseen_weekend_cluster', '')
+    new = pd.DataFrame(rows, columns=list(_UNSEEN_PMJAY_COLUMNS))
+    return pd.concat([df_pmjay, new], ignore_index=True)
+
+
+def _inject_growing_amounts(df_pmjay, ben_ids, cfg, rng):
+    """Append claims whose amounts rise by a steady percentage per month."""
+    rows = []
+    for i in range(cfg.count):
+        month_index = i % cfg.months  # 0..months-1 -> Jan..Dec 2024
+        admission = _unseen_date(rng, 2024, 1 + month_index)
+        amount = round(cfg.base_amount * (1 + cfg.monthly_growth) ** month_index)
+        claim_id = f"CLM_UNSEEN_GROW_{i:04d}"
+        rows.append({
+            'ClaimID': claim_id,
+            'BeneficiaryID': rng.choice(ben_ids),
+            'HospitalID': cfg.hospital_id,
+            'AdmissionDate': admission,
+            'DischargeDate': admission + timedelta(days=rng.randint(1, 3)),
+            'ProcedureName': _UNSEEN_PROCEDURES[i % len(_UNSEEN_PROCEDURES)],
+            'ClaimAmount': amount,
+            'PatientStatus': 'Discharged',
+        })
+        _mark_fraud(claim_id, 'unseen_growing_amounts', '')
+    new = pd.DataFrame(rows, columns=list(_UNSEEN_PMJAY_COLUMNS))
+    return pd.concat([df_pmjay, new], ignore_index=True)
+
+
+def apply_unseen_injections(df_ben, df_mgn, df_pmjay):
+    """Append the three unseen (no-rule) typologies (module P2e).
+
+    Runs after the min-events floor and uses a dedicated RNG stream, so the
+    existing injected volumes are byte-identical to P2d. Returns the updated
+    ``(df_mgn, df_pmjay)``.
+    """
+    cfg = get_config().simulator.unseen
+    if not cfg.enabled:
+        return df_mgn, df_pmjay
+
+    rng = make_rng(get_config().seed + 400)
+    linked = _linked_beneficiaries(df_ben, df_mgn, df_pmjay)
+    safe = df_ben[
+        ~df_ben['BeneficiaryID'].astype(str).isin(linked)
+        & ~df_ben['BeneficiaryID'].astype(str).isin(HARD_NEGATIVES)
+        & df_ben['JobCardID'].notna()
+    ]
+    if safe.empty:
+        raise RuntimeError("no unlinked beneficiaries available for unseen injections")
+
+    df_mgn, used_bens = _inject_just_under_limit(
+        df_mgn, safe, cfg.just_under_limit, rng
+    )
+    pmj_bens = [
+        b for b in safe['BeneficiaryID'].astype(str) if b not in used_bens
+    ]
+    if not pmj_bens:
+        raise RuntimeError("no unlinked beneficiaries left for unseen PM-JAY injections")
+    df_pmjay = _inject_weekend_cluster(df_pmjay, pmj_bens, cfg.weekend_cluster, rng)
+    df_pmjay = _inject_growing_amounts(df_pmjay, pmj_bens, cfg.growing_amounts, rng)
+    return df_mgn, df_pmjay
+
+
 def print_injection_table(min_events: int) -> None:
     """Print the actual injected record counts per fraud_type."""
     print("\n" + "=" * 78)
@@ -929,6 +1111,10 @@ if __name__ == "__main__":
     df_ben, df_mgn, df_pmjay, floor_report = apply_min_events_floor(
         df_ben, df_mgn, df_pmjay, min_events
     )
+    # P2e: append the unseen typologies (no existing rule matches them). This
+    # runs after the floor with its own RNG stream, so the floor's picks - and
+    # therefore every existing per-type count - are unchanged.
+    df_mgn, df_pmjay = apply_unseen_injections(df_ben, df_mgn, df_pmjay)
     # Persist the post-floor tables so the floor rows reach the scanner.
     df_ben.to_csv('data/beneficiaries.csv', index=False)
     df_mgn.to_csv('data/transactions_mgnrega.csv', index=False)

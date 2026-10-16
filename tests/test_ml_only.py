@@ -85,17 +85,22 @@ def test_report_structure_and_exclusions() -> None:
     level = payload["levels"]["0.02"]
     assert level["evaluation_status"] == "in-sample"
 
-    by_domain = {d["domain"]: d for d in level["domains"]}
-    assert by_domain["MGNREGA Labor"]["calibration_status"] == "CALIBRATED"
-    assert by_domain["Civil Registry"]["calibration_status"] == "WEAK"
-    for domain in level["domains"]:
+    domains = {d["domain"]: d for d in level["domains"]}
+    excluded = {d["domain"]: d for d in level["excluded"]}
+
+    # Every domain is reported exactly once, split by calibration status.
+    assert set(domains) | set(excluded) == {
+        "Civil Registry", "MGNREGA Labor", "PM-JAY Medical",
+    }
+    assert not (set(domains) & set(excluded))
+    for domain in domains.values():
+        assert domain["calibration_status"] in ("CALIBRATED", "WEAK")
         assert domain["evaluation_status"] == "in-sample"
         for row in domain["by_fraud_type"]:
             assert row["evaluation_status"] in ("in-sample", "not evaluable")
-
-    excluded = {d["domain"] for d in level["excluded"]}
-    assert "PM-JAY Medical" in excluded
-    assert "Civil Registry" not in excluded
+    for domain in excluded.values():
+        assert domain["calibration_status"] == "UNCALIBRATED"
+        assert domain["note"] == "excluded: no calibrated threshold"
 
     for name in ("0.05", "0.10"):
         assert payload["levels"][name]["evaluation_status"] == "not evaluable"

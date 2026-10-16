@@ -18,6 +18,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from collections import Counter
 from pathlib import Path
 
 import pandas as pd
@@ -138,8 +139,12 @@ def test_labels_one_row_per_scannable_record_and_injections() -> None:
     assert blanks["injected_rule_id"].eq("").all()
 
     # Every injected fraud row carries a rule id; blank/clean rows do not.
+    # Unseen typologies (P2e) are fraud by design but carry *no* rule id.
     fraud_rows = labels[labels["is_fraud"] == 1]
-    assert fraud_rows["injected_rule_id"].ne("").all()
+    unseen_rows = fraud_rows[fraud_rows["fraud_type"].str.startswith("unseen_")]
+    ruled_rows = fraud_rows[~fraud_rows["fraud_type"].str.startswith("unseen_")]
+    assert ruled_rows["injected_rule_id"].ne("").all()
+    assert unseen_rows["injected_rule_id"].eq("").all()
 
 
 def test_repo_labels_match_repo_data_if_present() -> None:
@@ -153,3 +158,93 @@ def test_repo_labels_match_repo_data_if_present() -> None:
     mgn = pd.read_csv(data / "transactions_mgnrega.csv")
     pmj = pd.read_csv(data / "transactions_pmjay.csv")
     assert len(labels) == len(ben) + len(mgn) + len(pmj)
+
+
+# ---------------------------------------------------------------------------
+# 4. Unseen typologies (P2e): counts, existing counts unchanged, no rule fires
+# ---------------------------------------------------------------------------
+
+#: Per-type injected events at 0.02 prevalence as of P2d (before P2e). The
+#: unseen injections draw from a separate RNG stream, so these must not move.
+P2D_PER_TYPE_COUNTS = {
+    "bio_mismatch": 10,
+    "blacklisted_hospital": 10,
+    "cross_scheme": 24,
+    "free_money": 16,
+    "ghost_project": 23,
+    "hard_negative_blank_mobile": 40,
+    "impossible_human": 29,
+    "invalid_mobile": 10,
+    "massive_upcoding": 11,
+    "mega_family": 16,
+    "mobile_sharing": 10,
+    "muster_cartel": 36,
+    "procedure_mill": 51,
+    "suspicious_age": 10,
+    "time_travel": 10,
+    "underage_jobcard": 10,
+    "wage_theft": 34,
+}
+UNSEEN_TYPES = (
+    "unseen_growing_amounts",
+    "unseen_just_under_limit",
+    "unseen_weekend_cluster",
+)
+
+
+def _event_counts(labels: pd.DataFrame) -> dict[str, int]:
+    """Per-fraud_type injected events (a row may carry ``A|B``)."""
+    counts: Counter = Counter()
+    for types in labels["fraud_type"].astype(str):
+        for name in types.split("|"):
+            name = name.strip()
+            if name:
+                counts[name] += 1
+    return dict(counts)
+
+
+def _unseen_event_ids(labels: pd.DataFrame) -> dict[str, set[str]]:
+    events: dict[str, set[str]] = {}
+    for record_id, types in zip(labels["record_id"], labels["fraud_type"]):
+        for name in str(types).split("|"):
+            if name.startswith("unseen_"):
+                events.setdefault(name, set()).add(str(record_id))
+    return events
+
+
+def test_unseen_typologies_present_and_existing_counts_unchanged() -> None:
+    data = _generated("a")[0] / "data"
+    labels = pd.read_csv(data / "labels.csv", keep_default_na=False)
+    counts = _event_counts(labels)
+
+    # 1. Existing per-type counts are identical to P2d.
+    for name, expected in P2D_PER_TYPE_COUNTS.items():
+        assert counts.get(name, 0) == expected, (name, counts.get(name, 0), expected)
+
+    # 2. The three unseen types are present, each with >= min_events events,
+    #    labelled is_fraud=1 and an empty injected_rule_id.
+    cfg = get_config()
+    assert sorted(t for t in counts if t.startswith("unseen_")) == list(UNSEEN_TYPES)
+    for name in UNSEEN_TYPES:
+        assert counts[name] >= cfg.simulator.min_events_per_type, name
+
+    rows = labels[labels["fraud_type"].isin(UNSEEN_TYPES)]
+    assert (rows["is_fraud"] == 1).all()
+    assert rows["injected_rule_id"].eq("").all()
+
+
+def test_unseen_typologies_do_not_fire_any_rule() -> None:
+    dest = _generated("a")[0]
+    labels = pd.read_csv(dest / "data" / "labels.csv", keep_default_na=False)
+
+    from fraud.evaluate import scan_flags  # local: keeps sklearn off the fast path
+
+    rule_flags = scan_flags(dest)
+    flagged = set().union(*rule_flags.values()) if rule_flags else set()
+
+    fired = {
+        name: sorted(ids & flagged)
+        for name, ids in _unseen_event_ids(labels).items()
+        if ids & flagged
+    }
+    assert fired == {}, f"a rule fired on an unseen typology: {fired}"

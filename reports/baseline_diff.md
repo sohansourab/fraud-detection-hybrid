@@ -217,6 +217,65 @@ cross-scheme share of fraud modest.
   construction* - the simulator injects exactly the multi-scheme pattern the
   rule detects, so this is an in-sample figure, not a generalization estimate.
 
+## P2e - unseen typologies (patterns with no matching rule)
+
+Simulator, config and labels only; no rule, ML or evaluation code changed.
+
+**Three unseen typologies** were added under `simulator.unseen` (all
+`enabled` by default), each labelled `fraud_type=unseen_*` with an empty
+`injected_rule_id` and `is_fraud=1`. They are *appended* with a dedicated RNG
+stream (`seed + 400`) after the min-events floor, so the global RNG stream and
+every existing per-type count are untouched.
+
+| typology | pattern | events (0.02) |
+|---|---|---|
+| `unseen_just_under_limit` | MGNREGA payments at 95-99% of a 3500 approval limit (days = 15, amount = days x rate) | 12 |
+| `unseen_weekend_cluster` | 14 PM-JAY claims at one hospital across the July 2024 weekends | 14 |
+| `unseen_growing_amounts` | 13 PM-JAY claims at one hospital, amounts rising 3%/month over 12 months | 13 |
+
+**Existing per-type counts are identical to P2d** (in-sample, 0.02):
+
+| fraud_type | P2d | P2e | fraud_type | P2d | P2e |
+|---|---|---|---|---|---|
+| bio_mismatch | 10 | 10 | mobile_sharing | 10 | 10 |
+| blacklisted_hospital | 10 | 10 | muster_cartel | 36 | 36 |
+| cross_scheme | 24 | 24 | procedure_mill | 51 | 51 |
+| free_money | 16 | 16 | suspicious_age | 10 | 10 |
+| ghost_project | 23 | 23 | time_travel | 10 | 10 |
+| hard_negative_blank_mobile | 40 | 40 | underage_jobcard | 10 | 10 |
+| impossible_human | 29 | 29 | wage_theft | 34 | 34 |
+| invalid_mobile | 10 | 10 | mega_family | 16 | 16 |
+| massive_upcoding | 11 | 11 | **existing total** | 350 | 350 |
+
+**Rule flags on the unseen records (design goal 0):** 0 for
+`unseen_growing_amounts` (13), `unseen_just_under_limit` (12) and
+`unseen_weekend_cluster` (14) - see `reports/unseen_rule_flags.md`. No existing
+rule generalises to any of the three patterns. The injections were designed to
+avoid the rules; they were **not** tuned to reach zero.
+
+- Scannable records: 10115 -> **10154** (+39 unseen records). Realised
+  prevalence: 2.996% (303/10115) -> **3.368%** (342/10154). The extra unseen
+  fraud is expected and is *not* scaled back (that would move existing counts).
+- Total flags unchanged at **362**; flagged records unchanged at **308**;
+  RULE_025 unchanged at **48**. The unseen records fire no rule, so the flag
+  snapshot changes only in its input hashes.
+- Input-hash change (deliberate refresh of `flags_after_p1d.json`):
+
+  | table | P2d md5 | P2e md5 |
+  |---|---|---|
+  | beneficiaries | `e6a698421161e7a38dc0ee248b801761` | `e6a698421161e7a38dc0ee248b801761` (unchanged) |
+  | mgnrega | `7f2fcf07dff223e454ed6aebc554f431` | `c969b7b5f456cec32da01dc25ec1cc24` |
+  | pmjay | `3675414b8f906b985a2217085c5cc61e` | `3fafa2a717440cbd44371a480b35ba5e` |
+
+- Determinism: two consecutive runs produce byte-identical
+  `beneficiaries.csv`, `transactions_mgnrega.csv`, `transactions_pmjay.csv` and
+  `labels.csv` (MD5 match).
+- Regression tests: `tests/test_labels_contract.py`
+  (`test_unseen_typologies_present_and_existing_counts_unchanged`,
+  `test_unseen_typologies_do_not_fire_any_rule`).
+- **In-sample warning:** these are injected events at the 0.02 run, not a
+  generalization estimate.
+
 ## P3b - reconciliation guard + flat-type classification
 
 Evaluation-harness only: no rule logic and no generated data changed, so total
@@ -280,9 +339,11 @@ Totals: flags 2044 -> 2605; flagged records 1776 -> 1776.
 Later modules changed the *generated data*, not rule logic: P2a (injections +
 labels) -> RULE_025 890 / total flags 3339; P2b (prevalence 0.02) -> RULE_025
 16 / total flags 271; P2c (min-events floor + cross-scheme) -> RULE_025 69 /
-total flags 384; P2d (cross_scheme 25->12) -> RULE_025 48 / total flags 362.
+total flags 384; P2d (cross_scheme 25->12) -> RULE_025 48 / total flags 362;
+P2e (unseen typologies) -> RULE_025 48 / total flags 362 (unchanged; the unseen
+records fire no rule, so only the input hashes moved).
 The current committed snapshot is `tests/baseline/flags_after_p1d.json`; see the
-P2a, P2b, P2c and P2d sections above.
+P2a-P2e sections above.
 
 
 
