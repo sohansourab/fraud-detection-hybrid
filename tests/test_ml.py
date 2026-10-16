@@ -121,6 +121,15 @@ def test_other_procedure_encoded_not_zero() -> None:
     assert feats["LengthOfStay"].tolist() == [2, -1]
 
 
+def test_other_procedure_code_when_count_exceeds_top_k() -> None:
+    """With more procedures than top_k, the leftover really gets code 0."""
+    series = pd.Series(["A"] * 4 + ["B"] * 3 + ["C"] * 2 + ["D"] * 1 + ["E"] * 1)
+    encoded = _encode_procedures(series, top_k=3)
+    assert set(encoded[series.isin(["D", "E"])]) == {0}       # explicit "other"
+    assert set(encoded[series.isin(["A", "B", "C"])]) == {1, 2, 3}
+    assert 0 not in set(encoded[series.isin(["A", "B", "C"])])
+
+
 def test_threshold_chosen_on_val_only() -> None:
     val = pd.DataFrame({
         "ml_score": [0.5, 0.4, 0.3, 0.2],

@@ -1,0 +1,158 @@
+{
+  "generated_by": "fraud.ml_only",
+  "caveat": "Scores are on synthetic labels. ML thresholds are per-domain and not comparable across domains. A WEAK domain's numbers are not a calibrated result.",
+  "precision_target": 0.5,
+  "min_events_per_type": 10,
+  "min_val_flags_for_calibration": 10,
+  "min_val_tp_for_calibration": 3,
+  "levels": {
+    "0.02": {
+      "evaluation_status": "in-sample",
+      "domains": [
+        {
+          "domain": "Civil Registry",
+          "calibration_status": "WEAK",
+          "evaluation_status": "in-sample",
+          "ml_flags": 36,
+          "rule_flags": 64,
+          "ml_only_flags": 19,
+          "ml_only_caught": 0,
+          "val": {
+            "n": 322,
+            "fraud": 10,
+            "flags": 2,
+            "tp": 1,
+            "precision": 0.5,
+            "recall": 0.1
+          },
+          "test": {
+            "n": 402,
+            "fraud": 11,
+            "flags": 7,
+            "tp": 3,
+            "precision": 0.42857142857142855,
+            "recall": 0.2727272727272727
+          },
+          "by_fraud_type": [
+            {
+              "fraud_type": "cross_scheme",
+              "events": 8,
+              "ml_only_caught": 0,
+              "evaluation_status": "not evaluable"
+            },
+            {
+              "fraud_type": "invalid_mobile",
+              "events": 10,
+              "ml_only_caught": 0,
+              "evaluation_status": "in-sample"
+            },
+            {
+              "fraud_type": "mega_family",
+              "events": 16,
+              "ml_only_caught": 0,
+              "evaluation_status": "in-sample"
+            },
+            {
+              "fraud_type": "mobile_sharing",
+              "events": 10,
+              "ml_only_caught": 0,
+              "evaluation_status": "in-sample"
+            },
+            {
+              "fraud_type": "suspicious_age",
+              "events": 10,
+              "ml_only_caught": 0,
+              "evaluation_status": "in-sample"
+            },
+            {
+              "fraud_type": "underage_jobcard",
+              "events": 10,
+              "ml_only_caught": 0,
+              "evaluation_status": "in-sample"
+            }
+          ]
+        },
+        {
+          "domain": "MGNREGA Labor",
+          "calibration_status": "CALIBRATED",
+          "evaluation_status": "in-sample",
+          "ml_flags": 97,
+          "rule_flags": 144,
+          "ml_only_flags": 32,
+          "ml_only_caught": 0,
+          "val": {
+            "n": 807,
+            "fraud": 24,
+            "flags": 12,
+            "tp": 11,
+            "precision": 0.9166666666666666,
+            "recall": 0.4583333333333333
+          },
+          "test": {
+            "n": 1009,
+            "fraud": 22,
+            "flags": 21,
+            "tp": 11,
+            "precision": 0.5238095238095238,
+            "recall": 0.5
+          },
+          "by_fraud_type": [
+            {
+              "fraud_type": "cross_scheme",
+              "events": 8,
+              "ml_only_caught": 0,
+              "evaluation_status": "not evaluable"
+            },
+            {
+              "fraud_type": "free_money",
+              "events": 16,
+              "ml_only_caught": 0,
+              "evaluation_status": "in-sample"
+            },
+            {
+              "fraud_type": "ghost_project",
+              "events": 23,
+              "ml_only_caught": 0,
+              "evaluation_status": "in-sample"
+            },
+            {
+              "fraud_type": "impossible_human",
+              "events": 29,
+              "ml_only_caught": 0,
+              "evaluation_status": "in-sample"
+            },
+            {
+              "fraud_type": "muster_cartel",
+              "events": 36,
+              "ml_only_caught": 0,
+              "evaluation_status": "in-sample"
+            },
+            {
+              "fraud_type": "wage_theft",
+              "events": 34,
+              "ml_only_caught": 0,
+              "evaluation_status": "in-sample"
+            }
+          ]
+        }
+      ],
+      "excluded": [
+        {
+          "domain": "PM-JAY Medical",
+          "calibration_status": "UNCALIBRATED",
+          "ml_flags": 72,
+          "ml_only_caught": 0,
+          "note": "excluded: no calibrated threshold"
+        }
+      ]
+    },
+    "0.05": {
+      "evaluation_status": "not evaluable",
+      "reason": "no ML scores at this prevalence (P4a wrote 0.02 only; the raw features and record sets differ, so re-scoring would need new per-level thresholds, which P4b must not add)"
+    },
+    "0.10": {
+      "evaluation_status": "not evaluable",
+      "reason": "no ML scores at this prevalence (P4a wrote 0.02 only; the raw features and record sets differ, so re-scoring would need new per-level thresholds, which P4b must not add)"
+    }
+  }
+}

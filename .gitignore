@@ -19,3 +19,5 @@ output/
 
 # Keep the generated evaluation metrics (the source of truth for docs)
 !reports/metrics.json
+# Keep the ML-only analysis result (source of truth for the P4b numbers)
+!reports/ml_only.json
