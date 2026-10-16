@@ -18,6 +18,12 @@ ML scores exist only for prevalence 0.02 (P4a wrote a single ``ml_scores.csv``);
 0.05/0.10 have different raw features and record sets, so they are marked
 ``not evaluable`` rather than scored with the wrong thresholds.
 
+``ML_ONLY_CAUGHT`` is split into KNOWN (``fraud_type`` with no ``unseen_*``
+token) and UNSEEN (``fraud_type`` with an ``unseen_*`` token); UNSEEN is broken
+out by typology, and a type under ``simulator.min_events_per_type`` is marked
+``not evaluable``. PM-JAY is pinned out of the main table while its calibration
+rests on the injected patterns.
+
 Run with::
 
     python -m fraud.ml_only
@@ -54,9 +60,27 @@ MIN_VAL_FLAGS = 10
 MIN_VAL_TP = 3
 
 CAVEAT = (
-    "Scores are on synthetic labels. ML thresholds are per-domain and not "
-    "comparable across domains. A WEAK domain's numbers are not a calibrated "
-    "result."
+    "Scores are on synthetic labels. The UNSEEN patterns were injected by the "
+    "same simulator that generated the labels, so UNSEEN recall measures "
+    "detection of our injected patterns, not generalization. ML thresholds are "
+    "per-domain and not comparable across domains. A WEAK domain's numbers are "
+    "not a calibrated result."
+)
+
+#: The three unseen typologies (module P2e). Every row carries its own events
+#: count; a type below ``simulator.min_events_per_type`` is not evaluable.
+UNSEEN_TYPES: tuple[str, ...] = (
+    "unseen_just_under_limit",
+    "unseen_weekend_cluster",
+    "unseen_growing_amounts",
+)
+
+#: Domains pinned out of the main comparison table. PM-JAY's calibrated status
+#: now rests on the injected (unseen) patterns, so it stays excluded until P4c
+#: explains why it should count.
+PINNED_EXCLUDED = {"PM-JAY Medical"}
+PINNED_EXCLUDED_NOTE = (
+    "excluded: calibration rests on injected (unseen) patterns; see P4c"
 )
 
 
@@ -177,6 +201,55 @@ def caught_by_type(
     return rows
 
 
+def _has_unseen(fraud_type: str) -> bool:
+    """True if any ``|``-separated type starts with ``unseen_``."""
+    return any(name.strip().startswith("unseen_") for name in str(fraud_type).split("|"))
+
+
+def _has_type(fraud_type: str, target: str) -> bool:
+    """True if ``target`` is one of the ``|``-separated types."""
+    return target in [name.strip() for name in str(fraud_type).split("|")]
+
+
+def caught_split(
+    frame: pd.DataFrame, rule_records: set[str], min_events: int
+) -> dict[str, Any]:
+    """Split ``ML_ONLY_CAUGHT`` into KNOWN and UNSEEN, then UNSEEN by type.
+
+    KNOWN + UNSEEN == ``ml_only_caught`` by construction: every caught record
+    is classified by whether any of its ``fraud_type`` tokens is ``unseen_*``.
+    """
+    fraud = frame[frame["is_fraud"] == 1]
+    caught = fraud[
+        (fraud["ml_flag"] == 1) & (~fraud["record_id"].isin(rule_records))
+    ]
+    unseen_mask = caught["fraud_type"].map(_has_unseen).astype(bool)
+    unseen_caught = caught[unseen_mask]
+    events = _types(fraud["fraud_type"])
+
+    by_type = []
+    for name in UNSEEN_TYPES:
+        event_count = events.get(name, 0)
+        by_type.append({
+            "fraud_type": name,
+            "events": event_count,
+            "ml_only_caught": int(
+                unseen_caught["fraud_type"]
+                .map(lambda v: _has_type(v, name))
+                .astype(bool)
+                .sum()
+            ),
+            "evaluation_status": (
+                "in-sample" if event_count >= min_events else "not evaluable"
+            ),
+        })
+    return {
+        "ml_only_caught_known": int((~unseen_mask).sum()),
+        "ml_only_caught_unseen": int(unseen_mask.sum()),
+        "unseen_by_type": by_type,
+    }
+
+
 def evaluate_domain(
     frame: pd.DataFrame, rule_records: set[str], cfg: Config
 ) -> dict[str, Any]:
@@ -185,11 +258,15 @@ def evaluate_domain(
     status = calibration_status(
         val["precision"], val["flags"], val["tp"], cfg.ml.precision_target
     )
+    split = caught_split(frame, rule_records, cfg.simulator.min_events_per_type)
+    for row in split["unseen_by_type"]:
+        row["calibration_status"] = status
     return {
         "domain": str(frame["domain"].iloc[0]),
         "calibration_status": status,
         "evaluation_status": "in-sample",
         **ml_only_stats(frame, rule_records),
+        **split,
         "val": val,
         "test": split_stats(frame[frame["split"] == "test"]),
         "by_fraud_type": caught_by_type(
@@ -209,16 +286,17 @@ def _fmt(value: float | None) -> str:
 def _main_table(domains: list[dict[str, Any]]) -> list[str]:
     lines = [
         "| domain | calibration | status | ML flags | rule flags | ML-only flags "
-        "| ML_ONLY_CAUGHT | val flags | val TP | val prec | val rec | test flags "
-        "| test TP | test prec | test rec |",
-        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+        "| ML_ONLY_CAUGHT | KNOWN | UNSEEN | val flags | val TP | val prec | val rec "
+        "| test flags | test TP | test prec | test rec |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for d in domains:
         val, test = d["val"], d["test"]
         lines.append(
             f"| {d['domain']} | {d['calibration_status']} | {d['evaluation_status']} "
             f"| {d['ml_flags']} | {d['rule_flags']} | {d['ml_only_flags']} "
-            f"| {d['ml_only_caught']} | {val['flags']} | {val['tp']} "
+            f"| {d['ml_only_caught']} | {d['ml_only_caught_known']} "
+            f"| {d['ml_only_caught_unseen']} | {val['flags']} | {val['tp']} "
             f"| {_fmt(val['precision'])} | {_fmt(val['recall'])} | {test['flags']} "
             f"| {test['tp']} | {_fmt(test['precision'])} | {_fmt(test['recall'])} |"
         )
@@ -234,6 +312,29 @@ def _type_table(domain: dict[str, Any]) -> list[str]:
         "|---|---|---|---|",
     ]
     for row in domain["by_fraud_type"]:
+        lines.append(
+            f"| {row['fraud_type']} | {row['events']} | {row['ml_only_caught']} "
+            f"| {row['evaluation_status']} |"
+        )
+    return lines
+
+
+def _split_table(domain: dict[str, Any]) -> list[str]:
+    """KNOWN vs UNSEEN split, then the UNSEEN typologies by events."""
+    lines = [
+        f"### ML_ONLY_CAUGHT: KNOWN vs UNSEEN - {domain['domain']} "
+        f"({domain['calibration_status']})",
+        "",
+        "| group | ML_ONLY_CAUGHT | status |",
+        "|---|---|---|",
+        f"| KNOWN | {domain['ml_only_caught_known']} | {domain['evaluation_status']} |",
+        f"| UNSEEN | {domain['ml_only_caught_unseen']} | {domain['evaluation_status']} |",
+        f"| total | {domain['ml_only_caught']} | {domain['evaluation_status']} |",
+        "",
+        "| unseen_type | events | ML_ONLY_CAUGHT | status |",
+        "|---|---|---|---|",
+    ]
+    for row in domain["unseen_by_type"]:
         lines.append(
             f"| {row['fraud_type']} | {row['events']} | {row['ml_only_caught']} "
             f"| {row['evaluation_status']} |"
@@ -267,22 +368,32 @@ def render_markdown(payload: dict[str, Any]) -> str:
     for domain in level["domains"]:
         lines.extend(_type_table(domain))
         lines.append("")
+        lines.extend(_split_table(domain))
+        lines.append("")
 
-    lines.append("## Excluded: no calibrated threshold")
+    lines.append("## Excluded from the main table")
     lines.append("")
     lines.append(
-        "> These domains' ML flags are not a detector (threshold is a fallback, "
-        "not a calibrated operating point). Reported for completeness only."
+        "> Reported for completeness only; these domains are not part of the "
+        "main comparison. A pinned domain's note says why."
     )
     lines.append("")
-    lines.append("| domain | calibration | ML flags | ML_ONLY_CAUGHT |")
-    lines.append("|---|---|---|---|")
+    lines.append(
+        "| domain | calibration | status | ML flags | ML_ONLY_CAUGHT | KNOWN "
+        "| UNSEEN | note |"
+    )
+    lines.append("|---|---|---|---|---|---|---|---|")
     for domain in level["excluded"]:
         lines.append(
             f"| {domain['domain']} | {domain['calibration_status']} "
-            f"| {domain['ml_flags']} | {domain['ml_only_caught']} |"
+            f"| {domain['evaluation_status']} | {domain['ml_flags']} "
+            f"| {domain['ml_only_caught']} | {domain['ml_only_caught_known']} "
+            f"| {domain['ml_only_caught_unseen']} | {domain['note']} |"
         )
     lines.append("")
+    for domain in level["excluded"]:
+        lines.extend(_split_table(domain))
+        lines.append("")
 
     lines.append("## Not evaluated")
     lines.append("")
@@ -309,14 +420,12 @@ def run(write: bool = True) -> dict[str, Any]:
     excluded: list[dict[str, Any]] = []
     for domain_name in merged["domain"].unique():
         report = evaluate_domain(merged[merged["domain"] == domain_name], rule_records, cfg)
-        if report["calibration_status"] == "UNCALIBRATED":
-            excluded.append({
-                "domain": report["domain"],
-                "calibration_status": report["calibration_status"],
-                "ml_flags": report["ml_flags"],
-                "ml_only_caught": report["ml_only_caught"],
-                "note": "excluded: no calibrated threshold",
-            })
+        if report["domain"] in PINNED_EXCLUDED:
+            report["note"] = PINNED_EXCLUDED_NOTE
+            excluded.append(report)
+        elif report["calibration_status"] == "UNCALIBRATED":
+            report["note"] = "excluded: no calibrated threshold"
+            excluded.append(report)
         else:
             domains.append(report)
         logger.info(

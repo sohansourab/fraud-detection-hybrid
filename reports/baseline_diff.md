@@ -325,6 +325,38 @@ flags, flagged records and the baseline snapshot are unchanged.
   `test_payload_records_floor_and_reconciliation`, and
   `test_repo_flags_reconcile` - no xfail).
 
+## P4b-rerun - calibration expectation change (data change, not a model change)
+
+P2e appended the unseen typologies, which changed `reports/ml_scores.csv`
+(P4a refit on the new data: per-domain `IsolationForest`, thresholds re-chosen
+on val). P4b was then re-run on the new scores. No feature, threshold, rule,
+simulator or metric definition changed here - only the data the ML layer sees,
+so the calibration label is expected to move. These are the new hardcoded
+expectations in `tests/test_ml_only.py` (the old outcome is kept as history).
+
+| domain | old outcome | new outcome | old val (flags/TP/prec) | new val (flags/TP/prec) | reason |
+|---|---|---|---|---|---|
+| Civil Registry | WEAK | WEAK | 2 / 1 / 0.500 | 2 / 1 / 0.500 | unchanged: too few val flags to call it calibrated |
+| MGNREGA Labor | CALIBRATED | CALIBRATED | 12 / 11 / 0.917 | 14 / 11 / 0.786 | still calibrated; the added unseen rows shift val precision |
+| PM-JAY Medical | UNCALIBRATED | CALIBRATED | not persisted (old report stored no val for excluded rows; precision was < 0.5) | 13 / 9 / 0.692 | the injected unseen claims are ML-detectable, so val precision crossed the target |
+
+- The old values come from the pre-P2e committed `reports/ml_only.json`
+  (`db4dfdb`); the new values come from the regenerated report. Civil and
+  MGNREGA keep their outcome; PM-JAY's label moved.
+- PM-JAY stays in the excluded block even though it now reads CALIBRATED: its
+  calibration rests on the injected (unseen) patterns, so it is not a
+  generalization result. It stays out of the main table until P4c explains why
+  it should count (`PINNED_EXCLUDED` in `src/fraud/ml_only.py`).
+- `ML_ONLY_CAUGHT` is split into KNOWN (non-`unseen_*`) and UNSEEN
+  (`unseen_*`), with UNSEEN broken out by typology and any type under 10 events
+  marked not evaluable. In-sample at prevalence 0.02: Civil 0/0, MGNREGA 0/1
+  (unseen_just_under_limit), PM-JAY 0/27 (weekend_cluster 14, growing_amounts
+  13). The KNOWN column is 0 everywhere: the rules catch every injected
+  in-sample typology, so every ML-only catch is an injected unseen pattern.
+- Regression tests: `tests/test_ml_only.py`
+  (`test_report_calibration_expectations`,
+  `test_known_and_unseen_sum_to_ml_only_caught`).
+
 ## Summary
 
 P1d/P1e changed only Rule 025:

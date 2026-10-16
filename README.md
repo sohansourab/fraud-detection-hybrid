@@ -327,8 +327,16 @@ Contributions welcome! Areas of interest:
   injection only shows that planted cross-scheme records were generated and
   joined correctly; it says nothing about whether the rule would catch real
   cross-scheme fraud.
-- **ML layer not built.** The `ML_ONLY` and `HYBRID` detectors are not
-  implemented yet (planned for P4); the evaluation reports them as
-  "not built", not as zero.
+- **ML layer is in-sample and per-domain.** The ML-only analysis
+  (`reports/ml_only.md`, `python -m fraud.ml_only`) is scored on the synthetic
+  labels at prevalence 0.02 only. ML thresholds are chosen per domain and are
+  **not comparable across domains**. The `HYBRID` detector is not implemented
+  yet (planned for P4c).
+- **PM-JAY's CALIBRATED status rests on injected patterns.** After P2e injected
+  the unseen typologies, PM-JAY's validation precision crossed the target, so it
+  now reads CALIBRATED. Those unseen patterns were written by the same simulator
+  that wrote the labels, so this measures detection of our injected patterns,
+  not generalization. PM-JAY stays in the excluded block until P4c explains why
+  it should count.
 
 **⚠️ Disclaimer:** This is a demonstration system using synthetic data. For production use, integrate with actual government databases and legal frameworks.

@@ -5,7 +5,9 @@ Covers:
 * the 1:1 join fails loudly on a duplicate or unmatched ``record_id``;
 * the calibration-status function labels each case correctly;
 * ``ML_ONLY_CAUGHT`` excludes records flagged by any rule;
-* the report excludes the uncalibrated domain and marks un-scored levels.
+* the report's per-domain calibration outcomes are hardcoded (P4b-rerun) and
+  every domain is reported exactly once;
+* ``KNOWN + UNSEEN == ML_ONLY_CAUGHT`` for every domain.
 """
 from __future__ import annotations
 
@@ -23,11 +25,31 @@ for _path in (REPO_ROOT / "src", REPO_ROOT):
 from fraud.ml_only import (  # noqa: E402
     ML_SCORES_CSV,
     MLError,
+    PINNED_EXCLUDED_NOTE,
     calibration_status,
     join_scores_labels,
     ml_only_stats,
     run,
 )
+
+#: Hardcoded per-domain calibration outcomes (P4b-rerun).
+#:
+#: ``PM-JAY Medical`` moved from ``UNCALIBRATED`` (pre-P2e) to ``CALIBRATED``
+#: after P2e injected the unseen patterns: the ML layer was refit on the new
+#: data, so the label moved. See reports/baseline_diff.md ("P4b-rerun").
+#: Do NOT edit these to match a later run - if this test fails, stop and report.
+EXPECTED_CALIBRATION = {
+    "Civil Registry": "WEAK",
+    "MGNREGA Labor": "CALIBRATED",
+    "PM-JAY Medical": "CALIBRATED",  # was UNCALIBRATED before P2e
+}
+EXPECTED_MAIN = {"Civil Registry", "MGNREGA Labor"}
+EXPECTED_EXCLUDED = {"PM-JAY Medical"}
+EXPECTED_UNSEEN_TYPES = {
+    "unseen_just_under_limit",
+    "unseen_weekend_cluster",
+    "unseen_growing_amounts",
+}
 
 
 def test_join_assert_fires_on_duplicate_record_id() -> None:
@@ -77,7 +99,7 @@ def test_ml_only_caught_excludes_rule_flagged() -> None:
     }
 
 
-def test_report_structure_and_exclusions() -> None:
+def test_report_calibration_expectations() -> None:
     if not ML_SCORES_CSV.is_file():
         pytest.skip("reports/ml_scores.csv not generated in this checkout")
 
@@ -87,20 +109,44 @@ def test_report_structure_and_exclusions() -> None:
 
     domains = {d["domain"]: d for d in level["domains"]}
     excluded = {d["domain"]: d for d in level["excluded"]}
+    reported = {**domains, **excluded}
 
-    # Every domain is reported exactly once, split by calibration status.
-    assert set(domains) | set(excluded) == {
-        "Civil Registry", "MGNREGA Labor", "PM-JAY Medical",
-    }
+    # Hardcoded expected outcome per domain (not derived from the output).
+    assert set(reported) == set(EXPECTED_CALIBRATION)
+    for name, expected in EXPECTED_CALIBRATION.items():
+        assert reported[name]["calibration_status"] == expected, name
+
+    # Partition assertion (additional check): each domain reported exactly once.
+    assert set(domains) | set(excluded) == set(EXPECTED_CALIBRATION)
     assert not (set(domains) & set(excluded))
-    for domain in domains.values():
-        assert domain["calibration_status"] in ("CALIBRATED", "WEAK")
+    assert set(domains) == EXPECTED_MAIN
+    assert set(excluded) == EXPECTED_EXCLUDED
+    assert excluded["PM-JAY Medical"]["note"] == PINNED_EXCLUDED_NOTE
+
+    for domain in reported.values():
         assert domain["evaluation_status"] == "in-sample"
         for row in domain["by_fraud_type"]:
             assert row["evaluation_status"] in ("in-sample", "not evaluable")
-    for domain in excluded.values():
-        assert domain["calibration_status"] == "UNCALIBRATED"
-        assert domain["note"] == "excluded: no calibrated threshold"
 
     for name in ("0.05", "0.10"):
         assert payload["levels"][name]["evaluation_status"] == "not evaluable"
+
+
+def test_known_and_unseen_sum_to_ml_only_caught() -> None:
+    if not ML_SCORES_CSV.is_file():
+        pytest.skip("reports/ml_scores.csv not generated in this checkout")
+
+    payload = run(write=False)
+    level = payload["levels"]["0.02"]
+    rows = level["domains"] + level["excluded"]
+    assert rows, "no domains reported"
+    for domain in rows:
+        assert (
+            domain["ml_only_caught_known"] + domain["ml_only_caught_unseen"]
+            == domain["ml_only_caught"]
+        ), domain["domain"]
+        assert {r["fraud_type"] for r in domain["unseen_by_type"]} == (
+            EXPECTED_UNSEEN_TYPES
+        ), domain["domain"]
+        for row in domain["unseen_by_type"]:
+            assert row["evaluation_status"] in ("in-sample", "not evaluable")

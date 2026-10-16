@@ -1,6 +1,6 @@
 # ML-only caught (in-sample)
 
-> **Caveat.** Scores are on synthetic labels. ML thresholds are per-domain and not comparable across domains. A WEAK domain's numbers are not a calibrated result.
+> **Caveat.** Scores are on synthetic labels. The UNSEEN patterns were injected by the same simulator that generated the labels, so UNSEEN recall measures detection of our injected patterns, not generalization. ML thresholds are per-domain and not comparable across domains. A WEAK domain's numbers are not a calibrated result.
 
 `ML_ONLY_CAUGHT` = `is_fraud=1` and ML flagged and **no rule** flagged the record. It is not a claim that ML is good: it counts only what the rules miss. Calibration is a label on the row, not a gate.
 
@@ -8,10 +8,10 @@
 
 > Scored against synthetic labels; not a generalization estimate. Thresholds are per-domain and not comparable across domains.
 
-| domain | calibration | status | ML flags | rule flags | ML-only flags | ML_ONLY_CAUGHT | val flags | val TP | val prec | val rec | test flags | test TP | test prec | test rec |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Civil Registry | WEAK | in-sample | 36 | 64 | 19 | 0 | 2 | 1 | 0.500 | 0.100 | 7 | 3 | 0.429 | 0.273 |
-| MGNREGA Labor | CALIBRATED | in-sample | 97 | 144 | 32 | 0 | 12 | 11 | 0.917 | 0.458 | 21 | 11 | 0.524 | 0.500 |
+| domain | calibration | status | ML flags | rule flags | ML-only flags | ML_ONLY_CAUGHT | KNOWN | UNSEEN | val flags | val TP | val prec | val rec | test flags | test TP | test prec | test rec |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Civil Registry | WEAK | in-sample | 36 | 64 | 19 | 0 | 0 | 0 | 2 | 1 | 0.500 | 0.100 | 7 | 3 | 0.429 | 0.273 |
+| MGNREGA Labor | CALIBRATED | in-sample | 105 | 144 | 40 | 1 | 0 | 1 | 14 | 11 | 0.786 | 0.423 | 21 | 10 | 0.476 | 0.385 |
 
 ### ML_ONLY_CAUGHT by fraud_type - Civil Registry (WEAK)
 
@@ -24,6 +24,20 @@
 | suspicious_age | 10 | 0 | in-sample |
 | underage_jobcard | 10 | 0 | in-sample |
 
+### ML_ONLY_CAUGHT: KNOWN vs UNSEEN - Civil Registry (WEAK)
+
+| group | ML_ONLY_CAUGHT | status |
+|---|---|---|
+| KNOWN | 0 | in-sample |
+| UNSEEN | 0 | in-sample |
+| total | 0 | in-sample |
+
+| unseen_type | events | ML_ONLY_CAUGHT | status |
+|---|---|---|---|
+| unseen_just_under_limit | 0 | 0 | not evaluable |
+| unseen_weekend_cluster | 0 | 0 | not evaluable |
+| unseen_growing_amounts | 0 | 0 | not evaluable |
+
 ### ML_ONLY_CAUGHT by fraud_type - MGNREGA Labor (CALIBRATED)
 
 | fraud_type | events | ML_ONLY_CAUGHT | status |
@@ -33,15 +47,44 @@
 | ghost_project | 23 | 0 | in-sample |
 | impossible_human | 29 | 0 | in-sample |
 | muster_cartel | 36 | 0 | in-sample |
+| unseen_just_under_limit | 12 | 1 | in-sample |
 | wage_theft | 34 | 0 | in-sample |
 
-## Excluded: no calibrated threshold
+### ML_ONLY_CAUGHT: KNOWN vs UNSEEN - MGNREGA Labor (CALIBRATED)
 
-> These domains' ML flags are not a detector (threshold is a fallback, not a calibrated operating point). Reported for completeness only.
+| group | ML_ONLY_CAUGHT | status |
+|---|---|---|
+| KNOWN | 0 | in-sample |
+| UNSEEN | 1 | in-sample |
+| total | 1 | in-sample |
 
-| domain | calibration | ML flags | ML_ONLY_CAUGHT |
+| unseen_type | events | ML_ONLY_CAUGHT | status |
 |---|---|---|---|
-| PM-JAY Medical | UNCALIBRATED | 72 | 0 |
+| unseen_just_under_limit | 12 | 1 | in-sample |
+| unseen_weekend_cluster | 0 | 0 | not evaluable |
+| unseen_growing_amounts | 0 | 0 | not evaluable |
+
+## Excluded from the main table
+
+> Reported for completeness only; these domains are not part of the main comparison. A pinned domain's note says why.
+
+| domain | calibration | status | ML flags | ML_ONLY_CAUGHT | KNOWN | UNSEEN | note |
+|---|---|---|---|---|---|---|---|
+| PM-JAY Medical | CALIBRATED | in-sample | 81 | 27 | 0 | 27 | excluded: calibration rests on injected (unseen) patterns; see P4c |
+
+### ML_ONLY_CAUGHT: KNOWN vs UNSEEN - PM-JAY Medical (CALIBRATED)
+
+| group | ML_ONLY_CAUGHT | status |
+|---|---|---|
+| KNOWN | 0 | in-sample |
+| UNSEEN | 27 | in-sample |
+| total | 27 | in-sample |
+
+| unseen_type | events | ML_ONLY_CAUGHT | status |
+|---|---|---|---|
+| unseen_just_under_limit | 0 | 0 | not evaluable |
+| unseen_weekend_cluster | 14 | 14 | in-sample |
+| unseen_growing_amounts | 13 | 13 | in-sample |
 
 ## Not evaluated
 
