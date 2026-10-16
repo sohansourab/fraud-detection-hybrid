@@ -11,7 +11,7 @@ import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from fraud.agent.tools import MAX_TOOL_CALLS, Case, Evidence
+from fraud.agent.tools import MAX_TOOL_CALLS, TOOL_SCHEMAS, Case, Evidence
 
 if TYPE_CHECKING:
     from fraud.agent.verifier import Verification
@@ -28,6 +28,12 @@ SYSTEM_PROMPT = (
     "'criminal'. Every factual sentence must end with the id of the evidence "
     "item it uses, for example [E1]. Only state facts that appear in the cited "
     "evidence."
+)
+
+PLANNER_PROMPT = (
+    "You are an auditor's assistant planning how to ground a review of one "
+    "flagged record. Choose the read-only tools that will answer the questions "
+    "you need; every call returns one evidence item."
 )
 
 
@@ -54,6 +60,56 @@ def load_llm_config(env: dict[str, str] | None = None) -> LLMConfig:
     )
 
 
+def tool_payload() -> list[dict[str, Any]]:
+    """The OpenAI ``tools`` array built from :data:`TOOL_SCHEMAS`."""
+    return [
+        {"type": "function", "function": dict(schema)}
+        for schema in TOOL_SCHEMAS.values()
+    ]
+
+
+def parse_tool_calls(message: dict[str, Any]) -> list[dict[str, Any]]:
+    """Turn an OpenAI chat ``message`` into planned tool calls.
+
+    Each planned call is ``{"tool": ..., "arguments": ...}``. A call whose
+    function name is unknown, whose arguments are not valid JSON, or whose
+    arguments are not a JSON object is returned with a ``malformed`` reason, so
+    the caller can record it rather than dropping it.
+    """
+    planned: list[dict[str, Any]] = []
+    for call in message.get("tool_calls") or []:
+        function = call.get("function") or {}
+        name = function.get("name")
+        raw = function.get("arguments")
+        if name not in TOOL_SCHEMAS:
+            planned.append(
+                {"tool": name, "arguments": raw, "malformed": f"unknown tool: {name}"}
+            )
+            continue
+        try:
+            arguments = json.loads(raw) if isinstance(raw, str) else raw
+        except (TypeError, ValueError) as exc:
+            planned.append(
+                {
+                    "tool": name,
+                    "arguments": raw,
+                    "malformed": f"unparseable arguments: {exc}",
+                }
+            )
+            continue
+        if not isinstance(arguments, dict):
+            planned.append(
+                {
+                    "tool": name,
+                    "arguments": raw,
+                    "malformed": "arguments is not a JSON object",
+                }
+            )
+            continue
+        planned.append({"tool": name, "arguments": arguments})
+    return planned
+
+
 class LLMClient:
     """Delegates drafting to a model, or to templates when offline."""
 
@@ -71,7 +127,20 @@ class LLMClient:
     # -- planning ----------------------------------------------------------
 
     def plan(self, case: Case) -> list[dict[str, Any]]:
-        """Return the tool calls to make for ``case`` (fixed and capped)."""
+        """Return the tool calls requested for ``case``.
+
+        Offline mode keeps the fixed plan, unchanged. In LLM mode the model
+        chooses the calls through the OpenAI ``tools`` parameter; malformed
+        calls are returned with a ``malformed`` reason (see
+        :func:`parse_tool_calls`). Capping is applied by the investigator, so
+        every requested call can be recorded.
+        """
+        if self.offline:
+            return self._offline_plan(case)
+        return self._llm_plan(case)
+
+    def _offline_plan(self, case: Case) -> list[dict[str, Any]]:
+        """The fixed, deterministic plan used offline."""
         calls: list[dict[str, Any]] = [
             {"tool": "get_record", "arguments": {"record_id": case.record_id}}
         ]
@@ -89,6 +158,11 @@ class LLMClient:
             {"tool": "get_neighbors", "arguments": {"record_id": case.record_id}}
         )
         return calls[:MAX_TOOL_CALLS]
+
+    def _llm_plan(self, case: Case) -> list[dict[str, Any]]:
+        """Ask the model to choose tool calls, then parse its ``tool_calls``."""
+        message = self._chat_tools(self._plan_messages(case))
+        return parse_tool_calls(message)
 
     # -- drafting ----------------------------------------------------------
 
@@ -114,28 +188,54 @@ class LLMClient:
 
     # -- transport ---------------------------------------------------------
 
-    def _chat(self, messages: list[dict[str, str]]) -> str:
+    def _post(
+        self,
+        messages: list[dict[str, str]],
+        tools: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        """POST a chat-completions request and return the parsed body."""
         import urllib.request
 
         url = self.config.base_url.rstrip("/") + "/chat/completions"
-        payload = json.dumps(
-            {
-                "model": self.config.model,
-                "messages": messages,
-                "temperature": 0,
-            }
-        ).encode("utf-8")
+        payload: dict[str, Any] = {
+            "model": self.config.model,
+            "messages": messages,
+            "temperature": 0,
+        }
+        if tools is not None:
+            payload["tools"] = tools
+            payload["tool_choice"] = "auto"
         request = urllib.request.Request(
             url,
-            data=payload,
+            data=json.dumps(payload).encode("utf-8"),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {self.config.api_key}",
             },
         )
         with urllib.request.urlopen(request, timeout=60) as response:
-            body = json.loads(response.read().decode("utf-8"))
+            return dict(json.loads(response.read().decode("utf-8")))
+
+    def _chat(self, messages: list[dict[str, str]]) -> str:
+        body = self._post(messages)
         return str(body["choices"][0]["message"]["content"]).strip()
+
+    def _chat_tools(self, messages: list[dict[str, str]]) -> dict[str, Any]:
+        """Ask the model to choose tool calls; return its ``message`` dict."""
+        body = self._post(messages, tools=tool_payload())
+        return dict(body["choices"][0]["message"])
+
+    def _plan_messages(self, case: Case) -> list[dict[str, str]]:
+        lines = [
+            f"Record: {case.record_id} (domain: {case.domain})",
+            f"Rules that flagged it: {', '.join(case.rule_ids) or 'none'}",
+            f"Request at most {MAX_TOOL_CALLS} tool calls.",
+        ]
+        return [
+            {"role": "system", "content": PLANNER_PROMPT},
+            {"role": "user", "content": "\n".join(lines)},
+        ]
+
 
     def _draft_messages(
         self, case: Case, evidence: list[Evidence]

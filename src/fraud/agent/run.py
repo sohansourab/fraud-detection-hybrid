@@ -87,26 +87,67 @@ def _summary(values: list[int]) -> dict[str, Any]:
 def compute_metrics(
     results: list[CaseResult], mode: str, model: str | None = None
 ) -> dict[str, Any]:
-    """Aggregate per-case results, keeping before/after rates separate."""
-    before_total = sum(result.verification_first.total for result in results)
-    before_bad = sum(result.verification_first.unsupported for result in results)
-    after_total = sum(result.verification.total for result in results)
-    after_bad = sum(result.verification.unsupported for result in results)
+    """Aggregate per-case results, keeping before/after rates separate.
+
+    Sentence counts use the same splitter for both passes. The final-draft
+    unsupported rate is reported against the final-draft denominator and
+    against the fixed first-draft denominator, so a draft that shrinks cannot
+    look better only because it has fewer sentences.
+    """
+    first_total = sum(result.verification_first.total for result in results)
+    first_bad = sum(result.verification_first.unsupported for result in results)
+    final_total = sum(result.verification.total for result in results)
+    final_bad = sum(result.verification.unsupported for result in results)
     statuses = Counter(result.status for result in results)
+    requested = sum(len(result.tool_call_log) for result in results)
+    executed = sum(
+        1 for result in results for entry in result.tool_call_log if entry["executed"]
+    )
+    capped = sum(
+        1 for result in results for entry in result.tool_call_log if entry["capped"]
+    )
+    malformed = sum(
+        1 for result in results for entry in result.tool_call_log if entry["malformed"]
+    )
+    revisions_accepted = sum(result.revisions_accepted for result in results)
+    revisions_rejected = sum(result.revisions for result in results) - revisions_accepted
     return {
         "generated_by": "fraud.agent.run",
         "disclaimer": DISCLAIMER,
         "mode": mode,
         "model": model,
         "n_cases": len(results),
-        "unsupported_sentence_rate_before": _rate(before_bad, before_total),
-        "unsupported_sentence_rate_after": _rate(after_bad, after_total),
-        "sentences_before": before_total,
-        "unsupported_before": before_bad,
-        "sentences_after": after_total,
-        "unsupported_after": after_bad,
+        "unsupported_sentence_rate_before": _rate(first_bad, first_total),
+        "unsupported_sentence_rate_after": _rate(final_bad, final_total),
+        "sentences_before": first_total,
+        "unsupported_before": first_bad,
+        "sentences_after": final_total,
+        "unsupported_after": final_bad,
+        "sentences_first": first_total,
+        "unsupported_first": first_bad,
+        "rate_first": _rate(first_bad, first_total),
+        "sentences_final": final_total,
+        "unsupported_final": final_bad,
+        "rate_final_final_denominator": _rate(final_bad, final_total),
+        "rate_final_first_denominator": _rate(final_bad, first_total),
         "tool_calls_per_case": _summary([result.tool_calls for result in results]),
+        "tool_requests_per_case": _summary(
+            [len(result.tool_call_log) for result in results]
+        ),
+        "tool_call_totals": {
+            "requested": requested,
+            "executed": executed,
+            "capped": capped,
+            "malformed": malformed,
+        },
+        "tool_calls_capped_total": capped,
+        "tool_calls_malformed_total": malformed,
         "revisions_per_case": _summary([result.revisions for result in results]),
+        "revisions_accepted_total": revisions_accepted,
+        "revisions_rejected_total": revisions_rejected,
+        "cases_revision_rejected": sum(
+            1 for result in results if result.revision_rejected
+        ),
         "status_counts": dict(sorted(statuses.items())),
     }
 

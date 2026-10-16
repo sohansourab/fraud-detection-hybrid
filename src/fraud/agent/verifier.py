@@ -4,6 +4,12 @@ A sentence passes only if it (a) carries at least one ``[E#]`` citation that
 exists in the evidence list, and (b) every number in the sentence appears in
 the text of the cited evidence (numbers inside citations are ignored, and
 thousands separators are removed before comparison).
+
+AGENT-FIX parser: a sentence may cite several evidence ids at once, written
+``[E2, E4]``, ``[E2][E4]`` or ``[E2] [E4]``. The parser reads every id in a
+bracketed group (comma-separated) and every adjacent group. Every cited id must
+exist in the evidence list, and each sentence still needs at least one valid
+id. The sentence splitter is unchanged; no other verifier logic changed.
 """
 from __future__ import annotations
 
@@ -13,7 +19,8 @@ from typing import Any
 
 from fraud.agent.tools import Evidence
 
-_EVIDENCE_RE = re.compile(r"\[(E\d+)\]")
+_EVIDENCE_RE = re.compile(r"\[\s*(E\d+(?:\s*[,;]\s*E\d+)*)\s*\]")
+_EVIDENCE_SPLIT = re.compile(r"[,;]")
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
 _NUMBER_RE = re.compile(r"\d+(?:\.\d+)?")
 
@@ -30,8 +37,15 @@ def split_sentences(text: str) -> list[str]:
 
 
 def evidence_ids(text: str) -> list[str]:
-    """Every ``[E#]`` citation in ``text``, in order."""
-    return _EVIDENCE_RE.findall(text or "")
+    """Every ``[E#]`` citation in ``text``, in order.
+
+    Accepts the multi-citation forms ``[E2, E4]``, ``[E2][E4]`` and
+    ``[E2] [E4]``; a comma-separated group contributes each id once.
+    """
+    ids: list[str] = []
+    for group in _EVIDENCE_RE.findall(text or ""):
+        ids.extend(part.strip() for part in _EVIDENCE_SPLIT.split(group) if part.strip())
+    return ids
 
 
 def numbers(text: str) -> set[str]:
@@ -74,6 +88,11 @@ class Verification:
     def total(self) -> int:
         return len(self.sentences)
 
+    @property
+    def rate(self) -> float:
+        """Unsupported sentences per sentence (0.0 for an empty draft)."""
+        return self.unsupported / self.total if self.total else 0.0
+
     def critique(self) -> str:
         """A repair note listing every rejected sentence and why."""
         if self.verdict:
@@ -102,6 +121,9 @@ def verify_sentence(
     cited = [item for item in ids if item in evidence_by_id]
     if not cited:
         reasons.append("no [E#] citation that exists in the evidence list")
+    unknown = sorted({item for item in ids if item not in evidence_by_id})
+    if unknown:
+        reasons.append(f"unknown evidence id(s): {', '.join(unknown)}")
 
     allowed: set[str] = set()
     for evidence_id in cited:

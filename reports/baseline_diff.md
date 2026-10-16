@@ -538,5 +538,25 @@ moved.
   `src/fraud/rules/`, so those five were fixed rather than excluded, and B905 is
   now enabled in `ruff.toml` with no ignore list.
 
+## AGENT-FIX parser
+
+Verifier-only change in `src/fraud/agent/verifier.py` (the agent branch,
+`AGENT-FIX`). The citation parser now accepts multi-citations in three written
+forms: `[E2, E4]`, `[E2][E4]` and `[E2] [E4]`.
+
+- `evidence_ids()` reads every id in a bracketed group (comma- or
+  semicolon-separated) and every adjacent group, so `[E2, E4]` yields
+  `["E2", "E4"]` and `[E2][E4]` yields `["E2", "E4"]`.
+- Every cited id must exist in the evidence list, and each sentence still needs
+  at least one valid id: a sentence citing only an unknown id, or mixing a
+  known id with an unknown one, is unsupported.
+- The sentence splitter is unchanged (`split_sentences()`), and no other
+  verifier logic changed.
+- Documented in the `verifier.py` module docstring; regression-tested in
+  `tests/test_agent_fix.py` (`test_parser_accepts_multi_citations`,
+  `test_parser_rejects_id_not_in_evidence`).
+- No rule, simulator, ML, HYBRID or `evaluate` metric definition changed, and
+  no generated report was hand-edited.
+
 
 
