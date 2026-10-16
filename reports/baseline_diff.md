@@ -217,6 +217,53 @@ cross-scheme share of fraud modest.
   construction* - the simulator injects exactly the multi-scheme pattern the
   rule detects, so this is an in-sample figure, not a generalization estimate.
 
+## P3b - reconciliation guard + flat-type classification
+
+Evaluation-harness only: no rule logic and no generated data changed, so total
+flags, flagged records and the baseline snapshot are unchanged.
+
+- `fraud.evaluate` now checks `flagged == TP + FP` for every per-rule row and
+  exits non-zero when it breaks (`reports/metrics.md` gets a "Reconciliation
+  check" section; `reports/metrics.json` gets `reconciliation_ok` /
+  `reconciliation_violations`). Every emitted flag must be a true positive
+  (record injected with this rule) or a false positive (any other flag).
+- **Confirmed issue (for the P3b fix):** today FP counts only flags on
+  `is_fraud=0`, so a flag on a *fraud* record injected with a **different** rule
+  is neither TP nor FP and the row does not reconcile. Observed from
+  `reports/metrics.json`:
+
+  | level | rule | flagged | TP | FP | unaccounted |
+  |---|---|---|---|---|---|
+  | 0.02 | RULE_002 | 18 | 10 | 0 | 8 |
+  | 0.02 | RULE_005 | 36 | 28 | 0 | 8 |
+  | 0.02 | RULE_009 | 18 | 10 | 0 | 8 |
+  | 0.02 | RULE_025 | 48 | 24 | 2 | 22 |
+  | 0.05 | RULE_002 | 23 | 15 | 0 | 8 |
+  | 0.05 | RULE_004 | 22 | 16 | 5 | 1 |
+  | 0.05 | RULE_005 | 75 | 67 | 0 | 8 |
+  | 0.05 | RULE_009 | 24 | 16 | 0 | 8 |
+  | 0.05 | RULE_025 | 94 | 24 | 0 | 70 |
+  | 0.10 | RULE_002 | 38 | 30 | 0 | 8 |
+  | 0.10 | RULE_004 | 37 | 32 | 4 | 1 |
+  | 0.10 | RULE_005 | 135 | 127 | 0 | 8 |
+  | 0.10 | RULE_009 | 42 | 34 | 0 | 8 |
+  | 0.10 | RULE_025 | 268 | 24 | 0 | 244 |
+
+  RULE_001 reconciles at every level (flagged = TP + FP). RULE_025's gap grows
+  with prevalence (22 -> 70 -> 244) because more records are flagged in
+  multiple schemes by unrelated rules.
+- **`mega_family` classification (rechecked against the actual counts):** flat
+  only while its injected count equals the structural floor
+  (`max_family_size + 1` = 16). Observed: 0.02 -> 16 (flat), 0.05 -> 16 (flat),
+  0.10 -> 32 (scaling). The decision is documented in `reports/metrics.md`
+  ("Flat-type classification"), generated from the payload (not hand-typed).
+- Regression tests: `tests/test_evaluate.py`
+  (`test_reconciliation_guard_flags_cross_rule_flag`,
+  `test_reconciliation_guard_accepts_consistent_rows`,
+  `test_payload_records_floor_and_reconciliation`), plus
+  `test_repo_flags_reconcile` marked `xfail(strict=True)` until the FP
+  definition is fixed.
+
 ## Summary
 
 P1d/P1e changed only Rule 025:

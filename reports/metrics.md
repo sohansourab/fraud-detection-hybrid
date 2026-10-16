@@ -100,6 +100,31 @@ Fixed/floored injected volume: `procedure_mill`, `cross_scheme`, and `mega_famil
 | RULE_021 | procedure_mill | in-sample | 51 | 51 | 51 | 0 | 0 | 1.00 | 1.00 | 1.00 |
 | RULE_025 | cross_scheme | in-sample | 268 | 24 | 24 | 0 | 0 | 1.00 | 1.00 | 1.00 |
 
+## Flat-type classification
+
+- `procedure_mill` (RULE_021) and `cross_scheme` (RULE_025): injected volume is fixed/structural (one mill group, a fixed beneficiary count), so they are flat at every level and do not measure prevalence sensitivity.
+- `mega_family` (RULE_004): classified flat only while its injected count equals the structural floor (`max_family_size + 1` = 16); above the floor it scales with prevalence and is classified scaling.
+  Observed for `mega_family`: 0.02 -> 16 injected (flat); 0.05 -> 16 injected (flat); 0.10 -> 32 injected (scaling).
+
+## Reconciliation check
+
+> **FAILED:** `flagged != TP + FP` for the rows below. Every emitted flag must be a TP (record injected with this rule) or an FP (any other flag); an unaccounted flag means precision is computed from an undercounted denominator.
+
+- RULE_002: flagged=18 != TP+FP=10 (unaccounted flags=8)
+- RULE_005: flagged=36 != TP+FP=28 (unaccounted flags=8)
+- RULE_009: flagged=18 != TP+FP=10 (unaccounted flags=8)
+- RULE_025: flagged=48 != TP+FP=26 (unaccounted flags=22)
+- RULE_002: flagged=23 != TP+FP=15 (unaccounted flags=8)
+- RULE_005: flagged=75 != TP+FP=67 (unaccounted flags=8)
+- RULE_009: flagged=24 != TP+FP=16 (unaccounted flags=8)
+- RULE_004: flagged=22 != TP+FP=21 (unaccounted flags=1)
+- RULE_025: flagged=94 != TP+FP=24 (unaccounted flags=70)
+- RULE_002: flagged=38 != TP+FP=30 (unaccounted flags=8)
+- RULE_004: flagged=37 != TP+FP=36 (unaccounted flags=1)
+- RULE_005: flagged=135 != TP+FP=127 (unaccounted flags=8)
+- RULE_009: flagged=42 != TP+FP=34 (unaccounted flags=8)
+- RULE_025: flagged=268 != TP+FP=24 (unaccounted flags=244)
+
 ## Detectors
 
 | detector | status | precision | recall | F1 |

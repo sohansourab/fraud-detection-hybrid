@@ -232,6 +232,60 @@ def rule_scores(
 
 
 # =============================================================================
+# RECONCILIATION GUARD
+# =============================================================================
+
+class EvaluationError(RuntimeError):
+    """Raised when the evaluation output is internally inconsistent."""
+
+
+def _field(row: Any, key: str) -> Any:
+    """Read ``key`` from a mapping or an object (RuleScore)."""
+    return row[key] if isinstance(row, dict) else getattr(row, key)
+
+
+def reconciliation_violations(rows: Sequence[Any]) -> list[str]:
+    """Return one message per row where ``flagged != TP + FP``.
+
+    Every flag a rule emits must be accounted for exactly once: a flag on a
+    record injected with that rule is a true positive, and *every other* flag is
+    a false positive. If the two do not add up, precision is being computed from
+    an undercounted denominator and the row is not trustworthy.
+    """
+    violations: list[str] = []
+    for row in rows:
+        flagged = _field(row, "flagged")
+        tp = _field(row, "tp")
+        fp = _field(row, "fp")
+        if flagged != tp + fp:
+            violations.append(
+                f"{_field(row, 'rule_id')}: flagged={flagged} != TP+FP={tp + fp} "
+                f"(unaccounted flags={flagged - tp - fp})"
+            )
+    return violations
+
+
+def assert_reconciliation(rows: Sequence[Any]) -> None:
+    """Fail loudly if any row breaks ``flagged == TP + FP``."""
+    violations = reconciliation_violations(rows)
+    if violations:
+        raise EvaluationError(
+            "flagged != TP + FP: every emitted flag must be either a true "
+            "positive (record injected with this rule) or a false positive "
+            "(any other flag).\n  " + "\n  ".join(violations)
+        )
+
+
+def payload_rows(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Every per-rule row in the payload, across all levels and sections."""
+    rows: list[dict[str, Any]] = []
+    for sections in payload["levels"].values():
+        rows.extend(sections["scaling_types"])
+        rows.extend(sections["flat_types"])
+    return rows
+
+
+# =============================================================================
 # DATA GENERATION + SCAN (one directory per prevalence)
 # =============================================================================
 
@@ -294,6 +348,7 @@ def build_payload(
         "generated_by": "fraud.evaluate",
         "caveat": CAVEAT,
         "min_events_per_type": cfg.simulator.min_events_per_type,
+        "mega_family_floor": cfg.civil_registry.max_family_size + 1,
         "detectors": DETECTORS,
         "levels": {},
     }
@@ -302,6 +357,10 @@ def build_payload(
             "scaling_types": [asdict(s) for s in scores if s.section == "scaling"],
             "flat_types": [asdict(s) for s in scores if s.section == "flat"],
         }
+    rows = payload_rows(payload)
+    violations = reconciliation_violations(rows)
+    payload["reconciliation_ok"] = not violations
+    payload["reconciliation_violations"] = violations
     return payload
 
 
@@ -322,6 +381,37 @@ def _table(scores: Sequence[dict[str, Any]]) -> list[str]:
             f"| {s['fn']} | {_fmt(s['precision'])} | {_fmt(s['recall'])} "
             f"| {_fmt(s['f1'])} |"
         )
+    return lines
+
+
+def _flat_classification_lines(payload: dict[str, Any]) -> list[str]:
+    """Explain the flat/scaling split using the *observed* injected counts."""
+    floor = payload["mega_family_floor"]
+    lines = [
+        "## Flat-type classification",
+        "",
+        "- `procedure_mill` (RULE_021) and `cross_scheme` (RULE_025): injected "
+        "volume is fixed/structural (one mill group, a fixed beneficiary count), "
+        "so they are flat at every level and do not measure prevalence "
+        "sensitivity.",
+        f"- `mega_family` (RULE_004): classified flat only while its injected "
+        f"count equals the structural floor (`max_family_size + 1` = {floor}); "
+        "above the floor it scales with prevalence and is classified scaling.",
+    ]
+    observed: list[str] = []
+    for level, sections in payload["levels"].items():
+        row = next(
+            (r for r in sections["scaling_types"] + sections["flat_types"]
+             if r["rule_id"] == "RULE_004"),
+            None,
+        )
+        if row is not None:
+            observed.append(
+                f"{level} -> {row['injected']} injected ({row['section']})"
+            )
+    if observed:
+        lines.append(f"  Observed for `mega_family`: {'; '.join(observed)}.")
+    lines.append("")
     return lines
 
 
@@ -357,6 +447,20 @@ def render_markdown(payload: dict[str, Any]) -> str:
         )
         lines.append("")
         lines.extend(_table(sections["flat_types"]))
+        lines.append("")
+    lines.extend(_flat_classification_lines(payload))
+    if not payload["reconciliation_ok"]:
+        lines.append("## Reconciliation check")
+        lines.append("")
+        lines.append(
+            "> **FAILED:** `flagged != TP + FP` for the rows below. Every emitted "
+            "flag must be a TP (record injected with this rule) or an FP (any "
+            "other flag); an unaccounted flag means precision is computed from "
+            "an undercounted denominator."
+        )
+        lines.append("")
+        for violation in payload["reconciliation_violations"]:
+            lines.append(f"- {violation}")
         lines.append("")
     lines.append("## Detectors")
     lines.append("")
@@ -402,6 +506,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     args = parser.parse_args(argv)
     payload = run(levels=args.levels, root=args.root, write=not args.no_write)
     print(render_markdown(payload))
+    # Fail *after* the report and metrics files are produced, so the broken rows
+    # are still inspectable (make eval exits non-zero until they reconcile).
+    assert_reconciliation(payload_rows(payload))
 
 
 if __name__ == "__main__":

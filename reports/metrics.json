@@ -2,6 +2,7 @@
   "generated_by": "fraud.evaluate",
   "caveat": "In-sample: every rule is scored against the same injections the simulator planted. The rules were written to catch those patterns, so precision and recall are optimistic and are NOT a generalization estimate.",
   "min_events_per_type": 10,
+  "mega_family_floor": 16,
   "detectors": [
     {
       "detector": "RULES_ONLY",
@@ -719,5 +720,22 @@
         }
       ]
     }
-  }
+  },
+  "reconciliation_ok": false,
+  "reconciliation_violations": [
+    "RULE_002: flagged=18 != TP+FP=10 (unaccounted flags=8)",
+    "RULE_005: flagged=36 != TP+FP=28 (unaccounted flags=8)",
+    "RULE_009: flagged=18 != TP+FP=10 (unaccounted flags=8)",
+    "RULE_025: flagged=48 != TP+FP=26 (unaccounted flags=22)",
+    "RULE_002: flagged=23 != TP+FP=15 (unaccounted flags=8)",
+    "RULE_005: flagged=75 != TP+FP=67 (unaccounted flags=8)",
+    "RULE_009: flagged=24 != TP+FP=16 (unaccounted flags=8)",
+    "RULE_004: flagged=22 != TP+FP=21 (unaccounted flags=1)",
+    "RULE_025: flagged=94 != TP+FP=24 (unaccounted flags=70)",
+    "RULE_002: flagged=38 != TP+FP=30 (unaccounted flags=8)",
+    "RULE_004: flagged=37 != TP+FP=36 (unaccounted flags=1)",
+    "RULE_005: flagged=135 != TP+FP=127 (unaccounted flags=8)",
+    "RULE_009: flagged=42 != TP+FP=34 (unaccounted flags=8)",
+    "RULE_025: flagged=268 != TP+FP=24 (unaccounted flags=244)"
+  ]
 }
