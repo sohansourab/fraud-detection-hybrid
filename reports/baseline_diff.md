@@ -513,5 +513,30 @@ records fire no rule, so only the input hashes moved).
 The current committed snapshot is `tests/baseline/flags_after_p1d.json`; see the
 P2a-P2e sections above.
 
+## B905 pass (zip strictness)
+
+No logic change: every edit adds `strict=` to an existing `zip()` call. Some
+single-line calls were reflowed across lines so the extra parameter fits; the
+token stream is otherwise identical, and no variable, return value or condition
+moved.
+
+- `strict=` added at 25 zip sites: 20 in `src/fraud/rules/` (civil 5, cross 4,
+  mgnrega 5, pmjay 6), 2 in `src/fraud/evaluate.py` and `src/fraud/hybrid.py`,
+  and 3 in tests (`tests/test_cross_scheme.py` x2, `tests/test_labels_contract.py`).
+- All 25 are length-matched by construction: each zips columns of one frame, or
+  a column with the same boolean-mask selection of the same frame.
+- 0 runtime `strict=` failures: `pytest -q` 66 passed and `make demo` exit 0.
+- Caveat: `strict=True` proves the lengths matched on the tested data and paths,
+  not on every possible input.
+- 0 change in output: `reports/` MD5s unchanged (`metrics.md`
+  `4AD522FF4521147CC981C36C300280E9`, `ml_only.md`
+  `A66C14D966708078A1446EEE7645AAC6`, `hybrid.json`
+  `FB10A87E08FE2D2DD477F7548267C898`, `hybrid.md`
+  `4E4508CD65B370052BCE2E7677376057`); `tests/baseline/flags_after_p1d.json`
+  unchanged.
+- Acceptance conflict: `ruff` B905 also fires on the five call sites outside
+  `src/fraud/rules/`, so those five were fixed rather than excluded, and B905 is
+  now enabled in `ruff.toml` with no ignore list.
+
 
 
