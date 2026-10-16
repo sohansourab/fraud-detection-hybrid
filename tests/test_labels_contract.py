@@ -205,7 +205,9 @@ def _event_counts(labels: pd.DataFrame) -> dict[str, int]:
 
 def _unseen_event_ids(labels: pd.DataFrame) -> dict[str, set[str]]:
     events: dict[str, set[str]] = {}
-    for record_id, types in zip(labels["record_id"], labels["fraud_type"]):
+    for record_id, types in zip(
+        labels["record_id"], labels["fraud_type"], strict=True
+    ):
         for name in str(types).split("|"):
             if name.startswith("unseen_"):
                 events.setdefault(name, set()).add(str(record_id))

@@ -12,15 +12,15 @@
 #               variable, F401 unused import, F811 redefinition.
 #   B023        flake8-bugbear - function binds a loop variable (late-binding
 #               bug class).
+#   B905        flake8-bugbear - zip() without strict= (silent truncation when
+#               the iterables differ in length). Every zip() in the repo is now
+#               explicit: strict=True, because each one pairs columns of the
+#               same frame (or a column and the same boolean-mask selection).
 #
 # Not selected, deliberately:
-#   B905 (zip without strict=) is a real bug class; every zip() in
-#   src/fraud/rules/ now passes strict=True. It is NOT selected here because
-#   B905 also fires on 5 call sites outside src/fraud/rules/ that this pass
-#   must not edit (evaluate.py, hybrid.py, tests). See reports/baseline_diff.md.
 #   PLW1510 / PLW2901 / PLW0603 are stylistic pylint warnings (explicit
 #   `check=`, loop-name reuse, `global`), not correctness checks.
 target-version = "py311"
 
 [lint]
-select = ["E4", "E7", "E9", "F", "B023"]
+select = ["E4", "E7", "E9", "F", "B023", "B905"]

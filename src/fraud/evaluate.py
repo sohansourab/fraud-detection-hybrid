@@ -126,7 +126,9 @@ def load_labels(path: str | Path) -> pd.DataFrame:
 def injected_by_rule(labels: pd.DataFrame) -> dict[str, set[str]]:
     """``{rule_id: {record_id, ...}}`` from ``injected_rule_id`` (recall truth)."""
     mapping: dict[str, set[str]] = {}
-    for record_id, rule_ids in zip(labels["record_id"], labels["injected_rule_id"]):
+    for record_id, rule_ids in zip(
+        labels["record_id"], labels["injected_rule_id"], strict=True
+    ):
         for rule_id in str(rule_ids).split("|"):
             rule_id = rule_id.strip()
             if rule_id:

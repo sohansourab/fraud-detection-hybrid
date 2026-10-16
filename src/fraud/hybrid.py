@@ -151,7 +151,7 @@ def _cross_overlap(
         [
             overlap(record_id, injected)
             for record_id, injected in zip(
-                frame["record_id"], frame["injected_rule_id"]
+                frame["record_id"], frame["injected_rule_id"], strict=True
             )
         ],
         index=frame.index,

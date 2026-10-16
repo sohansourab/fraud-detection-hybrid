@@ -61,7 +61,9 @@ def test_cross_scheme_beneficiaries_span_multiple_schemes(generated) -> None:
     assert len(cross) > 0
 
     domains: dict[str, set[str]] = {}
-    for record_id, domain in zip(cross["record_id"], cross["domain"]):
+    for record_id, domain in zip(
+        cross["record_id"], cross["domain"], strict=True
+    ):
         domains.setdefault(record_id.rsplit("BEN_CS_", 1)[-1], set()).add(domain)
 
     assert len(domains) == get_config().simulator.cross_scheme.beneficiaries
@@ -91,7 +93,9 @@ def test_cross_scheme_links_resolve_through_exact_joins(generated) -> None:
 
     cross = _cross_rows(labels)
     unresolved: list[str] = []
-    for record_id, domain in zip(cross["record_id"], cross["domain"]):
+    for record_id, domain in zip(
+        cross["record_id"], cross["domain"], strict=True
+    ):
         expected = "BEN_CS_" + record_id.rsplit("BEN_CS_", 1)[-1]
         if domain == "Civil Registry":
             resolved = record_id
