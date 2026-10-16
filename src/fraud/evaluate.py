@@ -140,6 +140,12 @@ def nonfraud_ids(labels: pd.DataFrame) -> set[str]:
     return set(labels.loc[mask, "record_id"].astype(str))
 
 
+def fraud_ids(labels: pd.DataFrame) -> set[str]:
+    """Record ids labelled ``is_fraud == 1`` (injected fraud of some type)."""
+    mask = labels["is_fraud"].astype(int) == 1
+    return set(labels.loc[mask, "record_id"].astype(str))
+
+
 # =============================================================================
 # SCORING
 # =============================================================================
@@ -148,8 +154,9 @@ def _prf(tp: int, fp: int, fn: int) -> tuple[float, float, float]:
     """Precision/recall/F1 via sklearn from the rule-level confusion counts.
 
     A flag on an ``is_fraud=0`` record is an FP; the recall denominator is the
-    records injected with this rule. TN is irrelevant to these three metrics, so
-    the arrays only carry TP/FP/FN.
+    records injected with this rule. ``OTHER_FRAUD`` (cross-rule overlap) is
+    excluded from both. TN is irrelevant to these three metrics, so the arrays
+    only carry TP/FP/FN.
     """
     y_true = [1] * tp + [0] * fp + [1] * fn
     y_pred = [1] * tp + [1] * fp + [0] * fn
@@ -181,6 +188,7 @@ class RuleScore:
     injected: int
     tp: int
     fp: int
+    other_fraud: int
     fn: int
     precision: float | None
     recall: float | None
@@ -193,19 +201,43 @@ def rule_scores(
     min_events: int,
     cfg: Any | None = None,
 ) -> list[RuleScore]:
-    """Score every registered rule against ``labels`` for one prevalence."""
+    """Score every registered rule against ``labels`` for one prevalence.
+
+    Every flag lands in exactly one of three buckets:
+
+    * ``tp`` - ``is_fraud=1`` and injected with *this* rule;
+    * ``other_fraud`` - ``is_fraud=1`` but injected with a *different* rule
+      (cross-rule overlap: not a true positive, and not a false positive in the
+      ``is_fraud`` sense);
+    * ``fp`` - ``is_fraud=0``.
+
+    Precision is ``TP / (TP + FP)`` (``other_fraud`` is not in the denominator);
+    recall is ``TP / (TP + FN)`` with the recall denominator the records injected
+    with this rule.
+    """
     cfg = cfg or get_config()
     injected = injected_by_rule(labels)
     nonfraud = nonfraud_ids(labels)
+    fraud = fraud_ids(labels)
 
     scores: list[RuleScore] = []
     for rule in get_rules():
         rule_id = rule.id
         flagged = set(flags_by_rule.get(rule_id, set()))
         positives = injected.get(rule_id, set())
-        tp = len(flagged & positives)
+        tp_ids = flagged & positives
+        other_ids = flagged & (fraud - positives)
+        fp_ids = flagged & nonfraud
+
+        uncovered = flagged - (tp_ids | other_ids | fp_ids)
+        if uncovered:
+            raise EvaluationError(
+                f"{rule_id}: {len(uncovered)} flag(s) fall outside TP / "
+                f"OTHER_FRAUD / FP: {sorted(uncovered)[:5]}"
+            )
+
+        tp, fp, other_fraud = len(tp_ids), len(fp_ids), len(other_ids)
         fn = len(positives - flagged)
-        fp = len(flagged & nonfraud)
 
         if len(positives) < min_events:
             precision = recall = f1 = None
@@ -223,6 +255,7 @@ def rule_scores(
             injected=len(positives),
             tp=tp,
             fp=fp,
+            other_fraud=other_fraud,
             fn=fn,
             precision=precision,
             recall=recall,
@@ -245,34 +278,38 @@ def _field(row: Any, key: str) -> Any:
 
 
 def reconciliation_violations(rows: Sequence[Any]) -> list[str]:
-    """Return one message per row where ``flagged != TP + FP``.
+    """Return one message per row where ``flagged != TP + FP + OTHER_FRAUD``.
 
-    Every flag a rule emits must be accounted for exactly once: a flag on a
-    record injected with that rule is a true positive, and *every other* flag is
-    a false positive. If the two do not add up, precision is being computed from
-    an undercounted denominator and the row is not trustworthy.
+    Every emitted flag must be in exactly one bucket: a true positive (record
+    injected with this rule), an ``OTHER_FRAUD`` overlap (a fraud record injected
+    with a *different* rule), or a false positive (``is_fraud=0``). If they do
+    not add up, some flag is unaccounted and the row is not trustworthy.
     """
     violations: list[str] = []
     for row in rows:
         flagged = _field(row, "flagged")
         tp = _field(row, "tp")
         fp = _field(row, "fp")
-        if flagged != tp + fp:
+        other = _field(row, "other_fraud")
+        total = tp + fp + other
+        if flagged != total:
             violations.append(
-                f"{_field(row, 'rule_id')}: flagged={flagged} != TP+FP={tp + fp} "
-                f"(unaccounted flags={flagged - tp - fp})"
+                f"{_field(row, 'rule_id')}: flagged={flagged} != "
+                f"TP+FP+OTHER_FRAUD={total} "
+                f"(unaccounted flags={flagged - total})"
             )
     return violations
 
 
 def assert_reconciliation(rows: Sequence[Any]) -> None:
-    """Fail loudly if any row breaks ``flagged == TP + FP``."""
+    """Fail loudly if any row breaks ``flagged == TP + FP + OTHER_FRAUD``."""
     violations = reconciliation_violations(rows)
     if violations:
         raise EvaluationError(
-            "flagged != TP + FP: every emitted flag must be either a true "
-            "positive (record injected with this rule) or a false positive "
-            "(any other flag).\n  " + "\n  ".join(violations)
+            "flagged != TP + FP + OTHER_FRAUD: every emitted flag must be a "
+            "true positive (record injected with this rule), an OTHER_FRAUD "
+            "overlap (fraud record injected with another rule), or a false "
+            "positive (is_fraud=0).\n  " + "\n  ".join(violations)
         )
 
 
@@ -370,17 +407,48 @@ def _fmt(value: float | None) -> str:
 
 def _table(scores: Sequence[dict[str, Any]]) -> list[str]:
     lines = [
-        "| rule | fraud_type | status | flagged | injected | TP | FP | FN "
-        "| precision | recall | F1 |",
-        "|---|---|---|---|---|---|---|---|---|---|---|",
+        "| rule | fraud_type | status | flagged | injected | TP | FP "
+        "| OTHER_FRAUD | FN | precision | recall | F1 |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for s in scores:
         lines.append(
             f"| {s['rule_id']} | {s['fraud_type']} | {s['evaluation_status']} "
             f"| {s['flagged']} | {s['injected']} | {s['tp']} | {s['fp']} "
-            f"| {s['fn']} | {_fmt(s['precision'])} | {_fmt(s['recall'])} "
-            f"| {_fmt(s['f1'])} |"
+            f"| {s['other_fraud']} | {s['fn']} | {_fmt(s['precision'])} "
+            f"| {_fmt(s['recall'])} | {_fmt(s['f1'])} |"
         )
+    return lines
+
+
+def _other_fraud_lines(payload: dict[str, Any]) -> list[str]:
+    """Per-rule cross-rule overlap (``OTHER_FRAUD``) at every prevalence."""
+    lines = [
+        "## Cross-rule overlap (OTHER_FRAUD)",
+        "",
+        "Cross-rule overlap is measured, not a false positive. High overlap means "
+        "the rules co-fire on the same records and the per-rule numbers are not "
+        "independent.",
+        "",
+        "| rule | " + " | ".join(payload["levels"]) + " |",
+        "|---" * (1 + len(payload["levels"])) + "|",
+    ]
+    rules: list[str] = []
+    for sections in payload["levels"].values():
+        for row in sections["scaling_types"] + sections["flat_types"]:
+            if row["rule_id"] not in rules:
+                rules.append(row["rule_id"])
+    for rule_id in rules:
+        counts = []
+        for sections in payload["levels"].values():
+            row = next(
+                (r for r in sections["scaling_types"] + sections["flat_types"]
+                 if r["rule_id"] == rule_id),
+                None,
+            )
+            counts.append(str(row["other_fraud"]) if row else "n/a")
+        lines.append(f"| {rule_id} | " + " | ".join(counts) + " |")
+    lines.append("")
     return lines
 
 
@@ -449,14 +517,16 @@ def render_markdown(payload: dict[str, Any]) -> str:
         lines.extend(_table(sections["flat_types"]))
         lines.append("")
     lines.extend(_flat_classification_lines(payload))
+    lines.extend(_other_fraud_lines(payload))
     if not payload["reconciliation_ok"]:
         lines.append("## Reconciliation check")
         lines.append("")
         lines.append(
-            "> **FAILED:** `flagged != TP + FP` for the rows below. Every emitted "
-            "flag must be a TP (record injected with this rule) or an FP (any "
-            "other flag); an unaccounted flag means precision is computed from "
-            "an undercounted denominator."
+            "> **FAILED:** `flagged != TP + FP + OTHER_FRAUD` for the rows below. "
+            "Every emitted flag must be a TP (record injected with this rule), an "
+            "OTHER_FRAUD overlap (fraud record injected with another rule), or an "
+            "FP (`is_fraud=0`); an unaccounted flag means the row is not "
+            "trustworthy."
         )
         lines.append("")
         for violation in payload["reconciliation_violations"]:

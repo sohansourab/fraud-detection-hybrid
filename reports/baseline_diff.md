@@ -222,47 +222,49 @@ cross-scheme share of fraud modest.
 Evaluation-harness only: no rule logic and no generated data changed, so total
 flags, flagged records and the baseline snapshot are unchanged.
 
-- `fraud.evaluate` now checks `flagged == TP + FP` for every per-rule row and
-  exits non-zero when it breaks (`reports/metrics.md` gets a "Reconciliation
-  check" section; `reports/metrics.json` gets `reconciliation_ok` /
-  `reconciliation_violations`). Every emitted flag must be a true positive
-  (record injected with this rule) or a false positive (any other flag).
-- **Confirmed issue (for the P3b fix):** today FP counts only flags on
-  `is_fraud=0`, so a flag on a *fraud* record injected with a **different** rule
-  is neither TP nor FP and the row does not reconcile. Observed from
-  `reports/metrics.json`:
+- **Fix - explicit `OTHER_FRAUD` bucket.** The earlier guard showed the old FP
+  definition was too narrow: a flag on a *fraud* record injected with a
+  **different** rule is not a TP for this rule and not an FP in the `is_fraud`
+  sense. It is now its own bucket and the identity
+  `flagged == TP + FP + OTHER_FRAUD` holds for every row (asserted in
+  `rule_scores` and by `assert_reconciliation`; `reports/metrics.json` carries
+  `reconciliation_ok` / `reconciliation_violations`).
+  - `TP` = `is_fraud=1` and injected with this rule;
+  - `OTHER_FRAUD` = `is_fraud=1` and injected with a different rule;
+  - `FP` = `is_fraud=0` (unchanged).
+  - Precision stays `TP / (TP + FP)`; recall denominator stays the records
+    injected with this rule. `OTHER_FRAUD` is measured, never folded into TP or
+    FP.
+- Per-rule `OTHER_FRAUD` counts (from `reports/metrics.json`; the full table is
+  in `reports/metrics.md`):
 
-  | level | rule | flagged | TP | FP | unaccounted |
-  |---|---|---|---|---|---|
-  | 0.02 | RULE_002 | 18 | 10 | 0 | 8 |
-  | 0.02 | RULE_005 | 36 | 28 | 0 | 8 |
-  | 0.02 | RULE_009 | 18 | 10 | 0 | 8 |
-  | 0.02 | RULE_025 | 48 | 24 | 2 | 22 |
-  | 0.05 | RULE_002 | 23 | 15 | 0 | 8 |
-  | 0.05 | RULE_004 | 22 | 16 | 5 | 1 |
-  | 0.05 | RULE_005 | 75 | 67 | 0 | 8 |
-  | 0.05 | RULE_009 | 24 | 16 | 0 | 8 |
-  | 0.05 | RULE_025 | 94 | 24 | 0 | 70 |
-  | 0.10 | RULE_002 | 38 | 30 | 0 | 8 |
-  | 0.10 | RULE_004 | 37 | 32 | 4 | 1 |
-  | 0.10 | RULE_005 | 135 | 127 | 0 | 8 |
-  | 0.10 | RULE_009 | 42 | 34 | 0 | 8 |
-  | 0.10 | RULE_025 | 268 | 24 | 0 | 244 |
+  | rule | 0.02 | 0.05 | 0.10 |
+  |---|---|---|---|
+  | RULE_002 | 8 | 8 | 8 |
+  | RULE_004 | 0 | 1 | 1 |
+  | RULE_005 | 8 | 8 | 8 |
+  | RULE_009 | 8 | 8 | 8 |
+  | RULE_025 | 22 | 70 | 244 |
+  | all other rules | 0 | 0 | 0 |
 
-  RULE_001 reconciles at every level (flagged = TP + FP). RULE_025's gap grows
-  with prevalence (22 -> 70 -> 244) because more records are flagged in
-  multiple schemes by unrelated rules.
+  RULE_025's overlap scales with prevalence (22 -> 70 -> 244): unrelated
+  typologies increasingly place records in multiple schemes, so Rule 025
+  co-fires on records the simulator injected for other rules. This is real
+  cross-rule overlap, not a false positive, and it means the per-rule numbers
+  are not independent.
+- No metric definition changed beyond the bucket above; detection is untouched
+  (e.g. RULE_002 recall at 0.10 is still 0.97 from its own FN, not redefined).
 - **`mega_family` classification (rechecked against the actual counts):** flat
   only while its injected count equals the structural floor
   (`max_family_size + 1` = 16). Observed: 0.02 -> 16 (flat), 0.05 -> 16 (flat),
   0.10 -> 32 (scaling). The decision is documented in `reports/metrics.md`
   ("Flat-type classification"), generated from the payload (not hand-typed).
 - Regression tests: `tests/test_evaluate.py`
-  (`test_reconciliation_guard_flags_cross_rule_flag`,
+  (`test_reconciliation_buckets_three_kinds`,
+  `test_reconciliation_guard_detects_missing_bucket`,
   `test_reconciliation_guard_accepts_consistent_rows`,
-  `test_payload_records_floor_and_reconciliation`), plus
-  `test_repo_flags_reconcile` marked `xfail(strict=True)` until the FP
-  definition is fixed.
+  `test_payload_records_floor_and_reconciliation`, and
+  `test_repo_flags_reconcile` - no xfail).
 
 ## Summary
 
